@@ -1,0 +1,56 @@
+{
+  "project_info": {
+    "project_id": "wayto-navigation",
+    "project_number": "827947622210",
+    "name": "WayTO-Navigation"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:827947622210:android:1c414681d860cb50",
+        "client_id": "android:ifgi.wayto_navigation",
+        "client_type": 1,
+        "android_client_info": {
+          "package_name": "ifgi.wayto_navigation",
+          "certificate_hash": []
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "827947622210-ecqatggjjgr91jc8bnd5nive5abl06v8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ifgi.wayto_navigation",
+            "certificate_hash": "1D2292DA3AF792CD524728CBC24F05AE349ADF1D"
+          }
+        },
+        {
+          "client_id": "827947622210-1j8p3d5g572fk3kgkpbt6l4dhdetipmf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "cloud_messaging_service": {
+          "status": 1,
+          "apns_config": []
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "google_signin_service": {
+          "status": 2
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "client_info": [],
+  "ARTIFACT_VERSION": "1"
+}
