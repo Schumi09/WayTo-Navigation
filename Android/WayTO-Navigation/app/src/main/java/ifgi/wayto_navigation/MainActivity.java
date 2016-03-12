@@ -19,6 +19,8 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
+import com.mapbox.mapboxsdk.annotations.Marker;
+import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
@@ -33,7 +35,11 @@ import static com.google.android.gms.location.LocationServices.*;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
+    /**
+     * Map features.
+     */
     private MapView mapView = null;
+    private Marker currentPositionMarker = null;
 
     protected static final String TAG = "WayTO-Navigation";
 
@@ -231,5 +237,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         Log.d("onlocationchanged", location.toString());
+        if (currentPositionMarker != null) {
+            mapView.removeMarker(currentPositionMarker);
+            currentPositionMarker = mapView.addMarker(new MarkerOptions()
+                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
+        }else{
+            currentPositionMarker = mapView.addMarker(new MarkerOptions()
+                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
+        }
     }
 }
