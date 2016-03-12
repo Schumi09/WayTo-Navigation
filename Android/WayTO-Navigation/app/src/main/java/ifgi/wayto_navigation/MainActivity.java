@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -11,6 +12,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
@@ -22,6 +25,7 @@ import com.google.android.gms.location.LocationServices;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
+import com.mapbox.mapboxsdk.camera.CameraUpdate;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -33,7 +37,7 @@ import java.util.Date;
 import static android.app.ProgressDialog.show;
 import static com.google.android.gms.location.LocationServices.*;
 
-public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
+public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
     /**
      * Map features.
@@ -46,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
+    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 500;
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
@@ -132,12 +136,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         // Create an instance of GoogleAPIClient.
         if (mGoogleApiClient == null) {
+            // ATTENTION: This "addApi(AppIndex.API)"was auto-generated to implement the App Indexing API.
+            // See https://g.co/AppIndexing/AndroidStudio for more information.
             mGoogleApiClient = new GoogleApiClient.Builder(this)
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
                     .addApi(API)
-                    .build();
-            Log.d("position", "sth happened");
+                    .addApi(AppIndex.API).build();
 
             createLocationRequest();
         }
@@ -162,12 +167,38 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mGoogleApiClient.connect();
         super.onStart();
         mapView.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(mGoogleApiClient, viewAction);
     }
 
     @Override
     protected void onStop() {
         mGoogleApiClient.disconnect();
         super.onStop();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(mGoogleApiClient, viewAction);
         mapView.onStop();
     }
 
@@ -228,15 +259,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 
-
-    /**
-     * Callback that fires when the location changes.
-     */
     @Override
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        Log.d("onlocationchanged", location.toString());
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude())) // Münster, Germany
+                .zoom(17)
+                .tilt(60)
+                .bearing(mCurrentLocation.getBearing())
+                .build();
+
         if (currentPositionMarker != null) {
             mapView.removeMarker(currentPositionMarker);
             currentPositionMarker = mapView.addMarker(new MarkerOptions()
@@ -245,5 +278,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             currentPositionMarker = mapView.addMarker(new MarkerOptions()
                     .position(new LatLng(location.getLatitude(), location.getLongitude())));
         }
+        mapView.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
 }
