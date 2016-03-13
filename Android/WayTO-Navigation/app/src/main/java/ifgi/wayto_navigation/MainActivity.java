@@ -1,13 +1,12 @@
 package ifgi.wayto_navigation;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
@@ -22,10 +21,15 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
+import com.mapbox.directions.DirectionsCriteria;
+import com.mapbox.directions.MapboxDirections;
+import com.mapbox.directions.service.models.DirectionsResponse;
+import com.mapbox.directions.service.models.DirectionsRoute;
+import com.mapbox.directions.service.models.Waypoint;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
-import com.mapbox.mapboxsdk.camera.CameraUpdate;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -33,8 +37,12 @@ import com.mapbox.mapboxsdk.views.MapView;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.List;
 
-import static android.app.ProgressDialog.show;
+import retrofit.Callback;
+import retrofit.Response;
+import retrofit.Retrofit;
+
 import static com.google.android.gms.location.LocationServices.*;
 
 public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
@@ -42,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**
      * Map features.
      */
+    protected String MAPBOX_ACCESS_TOKEN = "";
     private MapView mapView = null;
     private Marker currentPositionMarker = null;
 
@@ -71,6 +80,53 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
+    protected Waypoint origin = new Waypoint(7.60708, 51.93851);
+    protected Waypoint destination = new Waypoint(7.61369, 51.96851);
+    protected DirectionsRoute currentRoute = null;
+
+    private void getRoute(Waypoint origin, Waypoint destination) {
+        MapboxDirections md = new MapboxDirections.Builder()
+                .setAccessToken(MAPBOX_ACCESS_TOKEN)
+                .setOrigin(origin)
+                .setDestination(destination)
+                .setProfile(DirectionsCriteria.PROFILE_DRIVING)
+                .build();
+
+        md.enqueue(new Callback<DirectionsResponse>() {
+            @Override
+            public void onResponse(Response<DirectionsResponse> response, Retrofit retrofit) {
+
+                currentRoute = response.body().getRoutes().get(0);
+                showMessage(String.format("Route is %d meters long.", currentRoute.getDistance()));
+
+                // Draw the route on the map
+                drawRoute(currentRoute);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Log.e("Error", "Error: " + t.getMessage());
+                showMessage("Error: " + t.getMessage());
+            }
+        });
+    }
+
+    private void drawRoute(DirectionsRoute route) {
+        // Convert List<Waypoint> into LatLng[]
+        List<Waypoint> waypoints = route.getGeometry().getWaypoints();
+        LatLng[] point = new LatLng[waypoints.size()];
+        for (int i = 0; i < waypoints.size(); i++) {
+            point[i] = new LatLng(
+                    waypoints.get(i).getLatitude(),
+                    waypoints.get(i).getLongitude());
+        }
+
+        // Draw Points on MapView
+        mapView.addPolyline(new PolylineOptions()
+                .add(point)
+                .color(Color.parseColor("#3887be"))
+                .width(20));
+    }
 
     /**
      * Builds a GoogleApiClient.
@@ -133,6 +189,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
 
         // Create an instance of GoogleAPIClient.
         if (mGoogleApiClient == null) {
@@ -152,14 +209,15 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mapView.setStyleUrl(Style.MAPBOX_STREETS);
 
         CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(new LatLng(51.967018, 7.611936)) // Münster, Germany
+                .target(new LatLng(51.93851, 7.611936)) // Münster, Germany
                 .zoom(13)
-                .tilt(60)
                 .build();
 
         mapView.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-
         mapView.onCreate(savedInstanceState);
+
+        getRoute(origin, destination);
+
     }
 
     @Override
@@ -265,7 +323,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude())) // Münster, Germany
-                .zoom(17)
+                .zoom(18)
                 .tilt(60)
                 .bearing(mCurrentLocation.getBearing())
                 .build();
@@ -280,4 +338,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         }
         mapView.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
+
+    private void showMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
 }
