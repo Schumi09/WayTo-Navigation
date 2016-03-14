@@ -35,6 +35,12 @@ import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.views.MapView;
 
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.operation.distance.DistanceOp;
+
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
@@ -77,12 +83,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
     protected LocationRequest mLocationRequest;
     protected Location mCurrentLocation;
+    protected Location mCurrentLocationSnap;
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
     protected Waypoint origin = new Waypoint(7.60708, 51.93851);
     protected Waypoint destination = new Waypoint(7.61369, 51.96851);
     protected DirectionsRoute currentRoute = null;
+    protected LineString currentJtsRouteLs = null;
 
     private void getRoute(Waypoint origin, Waypoint destination) {
         MapboxDirections md = new MapboxDirections.Builder()
@@ -97,8 +105,16 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             public void onResponse(Response<DirectionsResponse> response, Retrofit retrofit) {
 
                 currentRoute = response.body().getRoutes().get(0);
-                showMessage(String.format("Route is %d meters long.", currentRoute.getDistance()));
 
+                int currentRouteSize = currentRoute.getGeometry().getCoordinates().size();
+                Coordinate[] coordinates = new Coordinate[currentRouteSize];
+
+                for (int i = 0; i < currentRouteSize; i++) {
+                    List node = currentRoute.getGeometry().getCoordinates().get(i);
+                    coordinates[i] = new Coordinate((double) node.get(1), (double) node.get(0));
+                }
+
+                currentJtsRouteLs = new GeometryFactory().createLineString(coordinates);
                 // Draw the route on the map
                 drawRoute(currentRoute);
             }
@@ -177,7 +193,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      */
     protected void stopLocationUpdates() {
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
-        }
+    }
 
     /**
      * Handles the Start Updates button and requests start of location updates. Does nothing if
@@ -317,10 +333,27 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 
+
+    /**
+     * onLocationChanged event.
+     * Once the location has changed a marker displays the user's current position and updates the
+     * mapview to the position as center. Locations are snapped to the route line usings JTS
+     * Topology Suite (
+     * @param location
+     */
     @Override
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+        mCurrentLocationSnap = mCurrentLocation;
+        Point mCurrentLocationJts = new GeometryFactory().createPoint(new Coordinate(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
+
+        Coordinate[] closestPoints = DistanceOp.nearestPoints(currentJtsRouteLs, mCurrentLocationJts);
+        mCurrentLocationSnap.setLatitude(closestPoints[0].x);
+        mCurrentLocationSnap.setLongitude(closestPoints[0].y);
+
+        mCurrentLocation = mCurrentLocationSnap;
+
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude())) // Münster, Germany
                 .zoom(18)
