@@ -145,6 +145,50 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
     /**
+     * Snapping location to the route line usings JTS Topology Suite
+     * Considering nearest point on route to location
+     * http://www.vividsolutions.com/jts/jtshome.htm
+     * @param location
+     * @return Snapped location
+     */
+    private Location snapLocation(Location location) {
+
+        Point mCurrentLocationJts = new GeometryFactory().createPoint(new Coordinate(location.getLatitude(), location.getLongitude()));
+
+        Coordinate[] closestPoints = DistanceOp.nearestPoints(currentJtsRouteLs, mCurrentLocationJts);
+        location.setLatitude(closestPoints[0].x);
+        location.setLongitude(closestPoints[0].y);
+
+        return location;
+    }
+
+
+    /**
+     * Moving mapview to current position
+     * Current position as center, bearing from location
+     * @param location
+     */
+    private void moveCurrentPositionMarker(Location location) {
+
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude())) // Münster, Germany
+                .zoom(18)
+                .tilt(60)
+                .bearing(mCurrentLocation.getBearing())
+                .build();
+
+        if (currentPositionMarker != null) {
+            mapView.removeMarker(currentPositionMarker);
+            currentPositionMarker = mapView.addMarker(new MarkerOptions()
+                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
+        } else {
+            currentPositionMarker = mapView.addMarker(new MarkerOptions()
+                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
+        }
+        mapView.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
+    /**
      * Builds a GoogleApiClient.
      */
     protected synchronized void buildGoogleApiClient() {
@@ -337,39 +381,20 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**
      * onLocationChanged event.
      * Once the location has changed a marker displays the user's current position and updates the
-     * mapview to the position as center. Locations are snapped to the route line usings JTS
-     * Topology Suite (
+     * mapview to the position as center.
      * @param location
      */
     @Override
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        mCurrentLocationSnap = mCurrentLocation;
-        Point mCurrentLocationJts = new GeometryFactory().createPoint(new Coordinate(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
 
-        Coordinate[] closestPoints = DistanceOp.nearestPoints(currentJtsRouteLs, mCurrentLocationJts);
-        mCurrentLocationSnap.setLatitude(closestPoints[0].x);
-        mCurrentLocationSnap.setLongitude(closestPoints[0].y);
-
-        mCurrentLocation = mCurrentLocationSnap;
-
-        CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude())) // Münster, Germany
-                .zoom(18)
-                .tilt(60)
-                .bearing(mCurrentLocation.getBearing())
-                .build();
-
-        if (currentPositionMarker != null) {
-            mapView.removeMarker(currentPositionMarker);
-            currentPositionMarker = mapView.addMarker(new MarkerOptions()
-                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
-        }else{
-            currentPositionMarker = mapView.addMarker(new MarkerOptions()
-                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
+        if(currentJtsRouteLs != null) {
+            mCurrentLocationSnap = snapLocation(mCurrentLocation);
+            moveCurrentPositionMarker(mCurrentLocationSnap);
+        } else {
+            moveCurrentPositionMarker(mCurrentLocation);
         }
-        mapView.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
 
     private void showMessage(String message) {
