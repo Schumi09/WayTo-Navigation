@@ -26,8 +26,10 @@ import com.mapbox.directions.MapboxDirections;
 import com.mapbox.directions.service.models.DirectionsResponse;
 import com.mapbox.directions.service.models.DirectionsRoute;
 import com.mapbox.directions.service.models.Waypoint;
+import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
@@ -59,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected String MAPBOX_ACCESS_TOKEN = "";
     private MapView mapView = null;
     private Marker currentPositionMarker = null;
+    private Polyline currentRoutePolyline = null;
 
     protected static final String TAG = "WayTO-Navigation";
 
@@ -92,6 +95,19 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
 
+    private void routeToJtsLineString (DirectionsRoute route) {
+
+        int currentRouteSize = route.getGeometry().getCoordinates().size();
+        Coordinate[] coordinates = new Coordinate[currentRouteSize];
+
+        for (int i = 0; i < currentRouteSize; i++) {
+            List node = route.getGeometry().getCoordinates().get(i);
+            coordinates[i] = new Coordinate((double) node.get(1), (double) node.get(0));
+        }
+
+        currentJtsRouteLs = new GeometryFactory().createLineString(coordinates);
+    }
+
     private void getRoute(Waypoint origin, Waypoint destination) {
         MapboxDirections md = new MapboxDirections.Builder()
                 .setAccessToken(MAPBOX_ACCESS_TOKEN)
@@ -100,21 +116,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 .setProfile(DirectionsCriteria.PROFILE_DRIVING)
                 .build();
 
+
+
         md.enqueue(new Callback<DirectionsResponse>() {
             @Override
             public void onResponse(Response<DirectionsResponse> response, Retrofit retrofit) {
-
                 currentRoute = response.body().getRoutes().get(0);
-
-                int currentRouteSize = currentRoute.getGeometry().getCoordinates().size();
-                Coordinate[] coordinates = new Coordinate[currentRouteSize];
-
-                for (int i = 0; i < currentRouteSize; i++) {
-                    List node = currentRoute.getGeometry().getCoordinates().get(i);
-                    coordinates[i] = new Coordinate((double) node.get(1), (double) node.get(0));
-                }
-
-                currentJtsRouteLs = new GeometryFactory().createLineString(coordinates);
+                routeToJtsLineString(currentRoute);
                 // Draw the route on the map
                 drawRoute(currentRoute);
             }
@@ -128,6 +136,10 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
     private void drawRoute(DirectionsRoute route) {
+
+        if (currentRoutePolyline != null) {
+            mapView.removeAnnotation(currentRoutePolyline);
+        }
         // Convert List<Waypoint> into LatLng[]
         List<Waypoint> waypoints = route.getGeometry().getWaypoints();
         LatLng[] point = new LatLng[waypoints.size()];
@@ -137,11 +149,10 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                     waypoints.get(i).getLongitude());
         }
 
-        // Draw Points on MapView
-        mapView.addPolyline(new PolylineOptions()
+        PolylineOptions routeOptions = new PolylineOptions()
                 .add(point)
-                .color(Color.parseColor("#3887be"))
-                .width(20));
+                .color(Color.parseColor("#3887be"));
+        currentRoutePolyline = mapView.addPolyline(routeOptions);
     }
 
     /**
@@ -395,6 +406,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         } else {
             moveCurrentPositionMarker(mCurrentLocation);
         }
+
     }
 
     private void showMessage(String message) {
