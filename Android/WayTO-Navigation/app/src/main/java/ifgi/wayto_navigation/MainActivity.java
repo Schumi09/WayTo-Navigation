@@ -2,10 +2,12 @@ package ifgi.wayto_navigation;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -26,7 +28,6 @@ import com.mapbox.directions.MapboxDirections;
 import com.mapbox.directions.service.models.DirectionsResponse;
 import com.mapbox.directions.service.models.DirectionsRoute;
 import com.mapbox.directions.service.models.Waypoint;
-import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
@@ -35,8 +36,10 @@ import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.mapboxsdk.views.MapView;
 
+import com.mapbox.mapboxsdk.maps.MapView;
+import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -46,6 +49,7 @@ import com.vividsolutions.jts.operation.distance.DistanceOp;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import retrofit.Callback;
 import retrofit.Response;
@@ -60,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      */
     protected String MAPBOX_ACCESS_TOKEN = "";
     private MapView mapView = null;
+    private MapboxMap mMapboxMap;
     private Marker currentPositionMarker = null;
     private Polyline currentRoutePolyline = null;
 
@@ -90,12 +95,86 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
+    /**Münster route waypoints*/
     protected Waypoint origin = new Waypoint(7.60708, 51.93851);
     protected Waypoint destination = new Waypoint(7.61369, 51.96851);
+
+    /**Meckenheim route waypoints
+    protected Waypoint origin = new Waypoint(7.034790, 50.627801);
+    protected Waypoint destination = new Waypoint(7.040636, 50.638532);*/
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
 
-    private void routeToJtsLineString (DirectionsRoute route) {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
+
+        Locale locale = new Locale("en_US");
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.locale = locale;
+        getBaseContext().getResources().updateConfiguration(config,
+                getBaseContext().getResources().getDisplayMetrics());
+
+        // Create an instance of GoogleAPIClient.
+        if (mGoogleApiClient == null) {
+            // ATTENTION: This "addApi(AppIndex.API)"was auto-generated to implement the App Indexing API.
+            // See https://g.co/AppIndexing/AndroidStudio for more information.
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(API)
+                    .addApi(AppIndex.API).build();
+
+            createLocationRequest();
+        }
+
+        /** Create a mapView and give it some properties */
+        mapView = (MapView) findViewById(R.id.mapview);
+        mapView.setStyleUrl(Style.MAPBOX_STREETS);
+        mapView.onCreate(savedInstanceState);
+
+        mapView.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(@NonNull MapboxMap mapboxMap) {
+                mMapboxMap = mapboxMap;
+                getRoute(origin, destination);
+                CameraPosition cameraPosition = new CameraPosition.Builder()
+                        .target(new LatLng(50.632614, 7.039815)) // Münster, Germany
+                        .zoom(13)
+                        .build();
+                mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            }
+        });
+    }
+
+
+    /**
+     * onLocationChanged event.
+     * Once the location has changed a marker displays the user's current position and updates the
+     * mapview to the position as center.
+     * @param location
+     */
+    @Override
+    public void onLocationChanged(Location location) {
+        mCurrentLocation = location;
+        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+
+        if (currentJtsRouteLs != null) {
+            mCurrentLocationSnap = snapLocation(mCurrentLocation);
+            moveCurrentPositionMarker(mCurrentLocationSnap);
+        } else {
+            moveCurrentPositionMarker(mCurrentLocation);
+        }
+
+    }
+
+
+    private void routeToJtsLineString(DirectionsRoute route) {
 
         int currentRouteSize = route.getGeometry().getCoordinates().size();
         Coordinate[] coordinates = new Coordinate[currentRouteSize];
@@ -115,7 +194,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 .setDestination(destination)
                 .setProfile(DirectionsCriteria.PROFILE_DRIVING)
                 .build();
-
 
 
         md.enqueue(new Callback<DirectionsResponse>() {
@@ -138,7 +216,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     private void drawRoute(DirectionsRoute route) {
 
         if (currentRoutePolyline != null) {
-            mapView.removeAnnotation(currentRoutePolyline);
+            mMapboxMap.removeAnnotation(currentRoutePolyline);
         }
         // Convert List<Waypoint> into LatLng[]
         List<Waypoint> waypoints = route.getGeometry().getWaypoints();
@@ -152,7 +230,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         PolylineOptions routeOptions = new PolylineOptions()
                 .add(point)
                 .color(Color.parseColor("#3887be"));
-        currentRoutePolyline = mapView.addPolyline(routeOptions);
+        currentRoutePolyline = mMapboxMap.addPolyline(routeOptions);
     }
 
     /**
@@ -182,21 +260,21 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     private void moveCurrentPositionMarker(Location location) {
 
         CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude())) // Münster, Germany
+                .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
                 .zoom(18)
                 .tilt(60)
                 .bearing(mCurrentLocation.getBearing())
                 .build();
 
         if (currentPositionMarker != null) {
-            mapView.removeMarker(currentPositionMarker);
-            currentPositionMarker = mapView.addMarker(new MarkerOptions()
+            mMapboxMap.removeMarker(currentPositionMarker);
+            currentPositionMarker = mMapboxMap.addMarker(new MarkerOptions()
                     .position(new LatLng(location.getLatitude(), location.getLongitude())));
         } else {
-            currentPositionMarker = mapView.addMarker(new MarkerOptions()
+            currentPositionMarker = mMapboxMap.addMarker(new MarkerOptions()
                     .position(new LatLng(location.getLatitude(), location.getLongitude())));
         }
-        mapView.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
 
     /**
@@ -255,41 +333,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      * updates have already been requested.
      */
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
-
-        // Create an instance of GoogleAPIClient.
-        if (mGoogleApiClient == null) {
-            // ATTENTION: This "addApi(AppIndex.API)"was auto-generated to implement the App Indexing API.
-            // See https://g.co/AppIndexing/AndroidStudio for more information.
-            mGoogleApiClient = new GoogleApiClient.Builder(this)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .addApi(API)
-                    .addApi(AppIndex.API).build();
-
-            createLocationRequest();
-        }
-
-        /** Create a mapView and give it some properties */
-        mapView = (MapView) findViewById(R.id.mapview);
-        mapView.setStyleUrl(Style.MAPBOX_STREETS);
-
-        CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(new LatLng(51.93851, 7.611936)) // Münster, Germany
-                .zoom(13)
-                .build();
-
-        mapView.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-        mapView.onCreate(savedInstanceState);
-
-        getRoute(origin, destination);
-
-    }
 
     @Override
     protected void onStart() {
@@ -367,6 +410,16 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         Log.i(TAG, "Connected to GoogleApiClient");
 
         if (mCurrentLocation == null) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
             mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
             mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         }
@@ -388,26 +441,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 
-
-    /**
-     * onLocationChanged event.
-     * Once the location has changed a marker displays the user's current position and updates the
-     * mapview to the position as center.
-     * @param location
-     */
-    @Override
-    public void onLocationChanged(Location location) {
-        mCurrentLocation = location;
-        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-
-        if(currentJtsRouteLs != null) {
-            mCurrentLocationSnap = snapLocation(mCurrentLocation);
-            moveCurrentPositionMarker(mCurrentLocationSnap);
-        } else {
-            moveCurrentPositionMarker(mCurrentLocation);
-        }
-
-    }
 
     private void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
