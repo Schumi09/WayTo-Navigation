@@ -120,18 +120,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         getBaseContext().getResources().updateConfiguration(config,
                 getBaseContext().getResources().getDisplayMetrics());
 
-        // Create an instance of GoogleAPIClient.
-        if (mGoogleApiClient == null) {
-            // ATTENTION: This "addApi(AppIndex.API)"was auto-generated to implement the App Indexing API.
-            // See https://g.co/AppIndexing/AndroidStudio for more information.
-            mGoogleApiClient = new GoogleApiClient.Builder(this)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .addApi(API)
-                    .addApi(AppIndex.API).build();
-
-            createLocationRequest();
-        }
+        buildGoogleApiClient();
+        createLocationRequest();
 
         /** Create a mapView and give it some properties */
         mapView = (MapView) findViewById(R.id.mapview);
@@ -148,6 +138,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                         .zoom(13)
                         .build();
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                startLocationUpdates();
             }
         });
     }
@@ -164,13 +155,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
 
-        if (currentJtsRouteLs != null) {
-            mCurrentLocationSnap = snapLocation(mCurrentLocation);
-            moveCurrentPositionMarker(mCurrentLocationSnap);
-        } else {
-            moveCurrentPositionMarker(mCurrentLocation);
+        if (mMapboxMap != null) {
+            if (currentJtsRouteLs != null) {
+                mCurrentLocationSnap = snapLocation(mCurrentLocation);
+                moveCurrentPositionMarker(mCurrentLocationSnap);
+            } else {
+                moveCurrentPositionMarker(mCurrentLocation);
+            }
         }
-
     }
 
 
@@ -258,7 +250,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      * @param location
      */
     private void moveCurrentPositionMarker(Location location) {
-
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
                 .zoom(18)
@@ -282,12 +273,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      */
     protected synchronized void buildGoogleApiClient() {
         Log.i(TAG, "Building GoogleApiClient");
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-        createLocationRequest();
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
     }
 
     /**
@@ -339,38 +331,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mGoogleApiClient.connect();
         super.onStart();
         mapView.onStart();
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app deep link URI is correct.
-                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
-        );
-        AppIndex.AppIndexApi.start(mGoogleApiClient, viewAction);
     }
 
     @Override
     protected void onStop() {
         mGoogleApiClient.disconnect();
         super.onStop();
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app deep link URI is correct.
-                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
-        );
-        AppIndex.AppIndexApi.end(mGoogleApiClient, viewAction);
         mapView.onStop();
     }
 
