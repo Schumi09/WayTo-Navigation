@@ -13,7 +13,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
 
-
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 
 import com.mapbox.directions.DirectionsCriteria;
 import com.mapbox.directions.MapboxDirections;
@@ -32,10 +40,6 @@ import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
-import com.mapzen.android.lost.api.LocationListener;
-import com.mapzen.android.lost.api.LocationRequest;
-import com.mapzen.android.lost.api.LocationServices;
-import com.mapzen.android.lost.api.LostApiClient;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -51,8 +55,9 @@ import retrofit.Callback;
 import retrofit.Response;
 import retrofit.Retrofit;
 
+import static com.google.android.gms.location.LocationServices.*;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
     /**
      * Map features.
@@ -77,10 +82,14 @@ public class MainActivity extends AppCompatActivity {
     public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
 
-    protected LostApiClient lostApiClient;
+    // Keys for storing activity state in the Bundle.
+    protected final static String REQUESTING_LOCATION_UPDATES_KEY = "requesting-location-updates-key";
+    protected final static String LOCATION_KEY = "location-key";
+    protected final static String LAST_UPDATED_TIME_STRING_KEY = "last-updated-time-string-key";
+
+    protected GoogleApiClient mGoogleApiClient;
 
     protected LocationRequest mLocationRequest;
-    protected LocationListener listener;
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
     protected String mLastUpdateTime;
@@ -111,7 +120,18 @@ public class MainActivity extends AppCompatActivity {
         getBaseContext().getResources().updateConfiguration(config,
                 getBaseContext().getResources().getDisplayMetrics());
 
-        buildLostApiClient();
+        // Create an instance of GoogleAPIClient.
+        if (mGoogleApiClient == null) {
+            // ATTENTION: This "addApi(AppIndex.API)"was auto-generated to implement the App Indexing API.
+            // See https://g.co/AppIndexing/AndroidStudio for more information.
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(API)
+                    .addApi(AppIndex.API).build();
+
+            createLocationRequest();
+        }
 
         /** Create a mapView and give it some properties */
         mapView = (MapView) findViewById(R.id.mapview);
@@ -128,26 +148,31 @@ public class MainActivity extends AppCompatActivity {
                         .zoom(13)
                         .build();
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-                listener = new LocationListener() {
-                    @Override
-                    public void onLocationChanged(Location location) {
-                        Log.d("locationchanged", location.toString());
-                        mCurrentLocation = location;
-                        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-
-                        if (currentJtsRouteLs != null) {
-                            mCurrentLocationSnap = snapLocation(mCurrentLocation);
-                            moveCurrentPositionMarker(mCurrentLocationSnap);
-                        } else {
-                            moveCurrentPositionMarker(mCurrentLocation);
-                        }
-                    }
-                };
-                createLocationRequest();
-                startLocationUpdates();
             }
         });
     }
+
+
+    /**
+     * onLocationChanged event.
+     * Once the location has changed a marker displays the user's current position and updates the
+     * mapview to the position as center.
+     * @param location
+     */
+    @Override
+    public void onLocationChanged(Location location) {
+        mCurrentLocation = location;
+        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+
+        if (currentJtsRouteLs != null) {
+            mCurrentLocationSnap = snapLocation(mCurrentLocation);
+            moveCurrentPositionMarker(mCurrentLocationSnap);
+        } else {
+            moveCurrentPositionMarker(mCurrentLocation);
+        }
+
+    }
+
 
     private void routeToJtsLineString(DirectionsRoute route) {
 
@@ -255,10 +280,13 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Builds a GoogleApiClient.
      */
-    protected synchronized void buildLostApiClient() {
-        Log.i(TAG, "Building LostApiClient");
-        lostApiClient = new LostApiClient.Builder(this).build();
-        lostApiClient.connect();
+    protected synchronized void buildGoogleApiClient() {
+        Log.i(TAG, "Building GoogleApiClient");
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
         createLocationRequest();
     }
 
@@ -268,9 +296,9 @@ public class MainActivity extends AppCompatActivity {
      * updates.
      */
     protected void createLocationRequest() {
-        mLocationRequest = LocationRequest.create();
+        mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
-        mLocationRequest.setSmallestDisplacement(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
+        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
@@ -278,14 +306,26 @@ public class MainActivity extends AppCompatActivity {
      * Requests location updates from the FusedLocationApi.
      */
     protected void startLocationUpdates() {
-        LocationServices.FusedLocationApi.requestLocationUpdates(mLocationRequest, listener);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
     }
 
     /**
      * Removes location updates from the FusedLocationApi.
      */
     protected void stopLocationUpdates() {
-        LocationServices.FusedLocationApi.removeLocationUpdates(listener);
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
 
     /**
@@ -296,16 +336,42 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStart() {
-        lostApiClient.connect();
+        mGoogleApiClient.connect();
         super.onStart();
         mapView.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(mGoogleApiClient, viewAction);
     }
 
     @Override
     protected void onStop() {
-        lostApiClient.disconnect();
+        mGoogleApiClient.disconnect();
         super.onStop();
-         mapView.onStop();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(mGoogleApiClient, viewAction);
+        mapView.onStop();
     }
 
     @Override
@@ -313,7 +379,7 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         mapView.onPause();
         // Stop location updates to save battery
-        if (lostApiClient.isConnected()) {
+        if (mGoogleApiClient.isConnected()) {
             stopLocationUpdates();
         }
     }
@@ -322,7 +388,7 @@ public class MainActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         mapView.onResume();
-        if (lostApiClient.isConnected() && mRequestingLocationUpdates) {
+        if (mGoogleApiClient.isConnected() && mRequestingLocationUpdates) {
             startLocationUpdates();
         }
     }
@@ -337,6 +403,42 @@ public class MainActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         mapView.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        Log.i(TAG, "Connected to GoogleApiClient");
+
+        if (mCurrentLocation == null) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+            mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+            mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+        }
+
+        if (mRequestingLocationUpdates) {
+            startLocationUpdates();
+        }
+
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.i(TAG, "Connection suspended");
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 
 
