@@ -23,6 +23,7 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
+
 import com.mapbox.directions.DirectionsCriteria;
 import com.mapbox.directions.MapboxDirections;
 import com.mapbox.directions.service.models.DirectionsResponse;
@@ -30,6 +31,8 @@ import com.mapbox.directions.service.models.DirectionsRoute;
 import com.mapbox.directions.service.models.Waypoint;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.Polygon;
+import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
@@ -51,6 +54,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import ifgi.wayto_navigation.model.Landmark;
 import retrofit.Callback;
 import retrofit.Response;
 import retrofit.Retrofit;
@@ -95,9 +99,16 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
+    protected Marker marker_destination = null;
     /**Münster route waypoints*/
-    protected Waypoint origin = new Waypoint(7.60708, 51.93851);
-    protected Waypoint destination = new Waypoint(7.61369, 51.96851);
+    protected Waypoint origin = new Waypoint(7.6179, 51.96353);
+    protected Waypoint destination = new Waypoint(7.60937, 51.96937);
+
+    /**Münster Landmarks*/
+    protected Landmark landmark_destination = new Landmark("destination", 7.60937, 51.96937);
+    protected Landmark dome = new Landmark("Dom", 7.625776, 51.962999);
+    protected Landmark station = new Landmark("Train Station", 7.634615, 51.956593);
+    protected Polygon landmark_destination_wedge = null;
 
     /**Meckenheim route waypoints
     protected Waypoint origin = new Waypoint(7.034790, 50.627801);
@@ -134,13 +145,21 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 mMapboxMap = mapboxMap;
                 getRoute(origin, destination);
                 CameraPosition cameraPosition = new CameraPosition.Builder()
-                        .target(new LatLng(50.632614, 7.039815)) // Münster, Germany
+                        .target(new LatLng(51.96937, 7.60937)) // Meckenheim, Germany
                         .zoom(13)
                         .build();
+
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                PolygonOptions polygonOption = new PolygonOptions()
+                        .add(new LatLng(51.96937, 7.60937))
+                                .add(new LatLng(51.957579, 7.602693))
+                                .add(new LatLng(51.960758, 7.621352))
+                                ;
+                //mMapboxMap.addPolygon(polygonOption);
                 startLocationUpdates();
             }
         });
+
     }
 
 
@@ -148,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      * onLocationChanged event.
      * Once the location has changed a marker displays the user's current position and updates the
      * mapview to the position as center.
+     * todo: distinguish between snap and not snapped location in wedge call
      * @param location
      */
     @Override
@@ -161,6 +181,17 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 moveCurrentPositionMarker(mCurrentLocationSnap);
             } else {
                 moveCurrentPositionMarker(mCurrentLocation);
+            }
+            //draw destination marker
+            if (dome.isOffScreen(mMapboxMap) == false) {
+                if (marker_destination == null) {
+                    mMapboxMap.addMarker(landmark_destination.drawMarker(mMapboxMap));
+                }
+            }else {
+                if (landmark_destination_wedge != null) {mMapboxMap.removePolygon(landmark_destination_wedge);}
+                //todo: catch NPE
+                landmark_destination_wedge = mMapboxMap.addPolygon(dome.drawWedge(mMapboxMap, mCurrentLocationSnap));
+                //Log.d("Wedge", landmark_destination_wedge.toString());
             }
         }
     }
@@ -252,9 +283,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     private void moveCurrentPositionMarker(Location location) {
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
-                .zoom(18)
-                .tilt(60)
-                .bearing(mCurrentLocation.getBearing())
+                .zoom(15)
+                //.tilt(60)
+                //.bearing(mCurrentLocation.getBearing())
                 .build();
 
         if (currentPositionMarker != null) {
