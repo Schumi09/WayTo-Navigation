@@ -50,6 +50,7 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.operation.distance.DistanceOp;
 
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -100,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Boolean mRequestingLocationUpdates = true;
 
     protected Marker marker_destination = null;
+    protected List<Polygon> wedges = new ArrayList<Polygon>();
     /**Münster route waypoints*/
     protected Waypoint origin = new Waypoint(7.6179, 51.96353);
     protected Waypoint destination = new Waypoint(7.60937, 51.96937);
@@ -107,7 +109,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**Münster Landmarks*/
     protected Landmark landmark_destination = new Landmark("destination", 7.60937, 51.96937);
     protected Landmark dome = new Landmark("Dom", 7.625776, 51.962999);
-    protected Landmark station = new Landmark("Train Station", 7.634615, 51.956593);
+    protected Landmark train_station = new Landmark("Train Station", 7.634615, 51.956593);
+    protected Landmark buddenturm = new Landmark("Buddenturm", 7.623099, 51.966311);
+    protected Landmark kapuzinerkloster = new Landmark("Kapuzinerkloster", 7.606970, 51.970665);
+    protected Landmark institute = new Landmark("Insitut of geoinformatics", 7.595541, 51.969386);
+    protected List<Landmark> landmarks = new ArrayList<Landmark>();
+    protected List<Marker> on_screen_markers = new ArrayList<Marker>();
     protected Polygon landmark_destination_wedge = null;
 
     /**Meckenheim route waypoints
@@ -131,6 +138,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         getBaseContext().getResources().updateConfiguration(config,
                 getBaseContext().getResources().getDisplayMetrics());
 
+        landmarks.add(dome);
+        landmarks.add(buddenturm);
+        landmarks.add(kapuzinerkloster);
+        landmarks.add(institute);
+
+
         buildGoogleApiClient();
         createLocationRequest();
 
@@ -145,17 +158,11 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 mMapboxMap = mapboxMap;
                 getRoute(origin, destination);
                 CameraPosition cameraPosition = new CameraPosition.Builder()
-                        .target(new LatLng(51.96937, 7.60937)) // Meckenheim, Germany
+                        .target(new LatLng(51.96937, 7.60937))
                         .zoom(13)
                         .build();
 
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-                PolygonOptions polygonOption = new PolygonOptions()
-                        .add(new LatLng(51.96937, 7.60937))
-                                .add(new LatLng(51.957579, 7.602693))
-                                .add(new LatLng(51.960758, 7.621352))
-                                ;
-                //mMapboxMap.addPolygon(polygonOption);
                 startLocationUpdates();
             }
         });
@@ -174,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-
+        //todo: fix layer removing
         if (mMapboxMap != null) {
             if (currentJtsRouteLs != null) {
                 mCurrentLocationSnap = snapLocation(mCurrentLocation);
@@ -182,16 +189,25 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             } else {
                 moveCurrentPositionMarker(mCurrentLocation);
             }
-            //draw destination marker
-            if (dome.isOffScreen(mMapboxMap) == false) {
-                if (marker_destination == null) {
-                    mMapboxMap.addMarker(landmark_destination.drawMarker(mMapboxMap));
+            if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
+                for (int a=0; a<wedges.size(); a++){
+                    mMapboxMap.removePolygon(wedges.get(a));
+                    wedges.remove(a);
                 }
-            }else {
-                if (landmark_destination_wedge != null) {mMapboxMap.removePolygon(landmark_destination_wedge);}
-                //todo: catch NPE
-                landmark_destination_wedge = mMapboxMap.addPolygon(dome.drawWedge(mMapboxMap, mCurrentLocationSnap));
-                //Log.d("Wedge", landmark_destination_wedge.toString());
+                for (int b=0; b<on_screen_markers.size(); b++){
+                    mMapboxMap.removeMarker(on_screen_markers.get(b));
+                    on_screen_markers.remove(b);
+                }
+            }
+            for (int i=0; i<landmarks.size(); i++) {
+                Landmark l = landmarks.get(i);
+                if (l.isOffScreen(mMapboxMap) == false) {
+                    if (marker_destination == null) {
+                        on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker(mMapboxMap)));
+                    }
+                } else {
+                    wedges.add(mMapboxMap.addPolygon(l.drawWedge(mMapboxMap)));
+                }
             }
         }
     }
@@ -285,7 +301,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
                 .zoom(15)
                 //.tilt(60)
-                //.bearing(mCurrentLocation.getBearing())
+                //bearing(mCurrentLocation.getBearing())
                 .build();
 
         if (currentPositionMarker != null) {

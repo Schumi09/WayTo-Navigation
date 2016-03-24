@@ -17,6 +17,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.PrecisionModel;
+import com.vividsolutions.jts.operation.distance.DistanceOp;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,32 +73,25 @@ public class Landmark {
         return markerOptions;
     }
 
-    public PolygonOptions drawWedge(MapboxMap map, Location current_user_position) {
+    public PolygonOptions drawWedge(MapboxMap map) {
         VisibleRegion bbox = map.getProjection().getVisibleRegion();
         LatLng p1;
         LatLng p2;
-        Coordinate locationJTS = new Coordinate(
-                this.location.getLatitude(), this.location.getLongitude());
-        Coordinate userPositionJts = new Coordinate(
-                current_user_position.getLatitude(), current_user_position.getLongitude());
-        Coordinate[] connection_coordinates = new Coordinate[2];
-        connection_coordinates[0] = userPositionJts;
-        connection_coordinates[1] = locationJTS;
-        LineString connection = new GeometryFactory(new PrecisionModel(
-                PrecisionModel.FLOATING), 4326).createLineString(connection_coordinates);
-
         List<LineString> bbox_borders = bboxToLineStringsJTS(bbox);
-        int positionToLocation = positionToLocation(bbox_borders, connection);
-        Coordinate intersection_coord = connection.intersection(bbox_borders
-                .get(positionToLocation)).getCoordinate();
+        int positionToLocation = positionToLocation(bbox_borders, this.locationJTS);
+        Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_borders
+                .get(positionToLocation), this.locationJTS)[0];
         LatLng intersection = new LatLng(intersection_coord.x, intersection_coord.y);
-        double distanceToSceen = distanceToScreen(map, intersection); //in pixel
 
-        double leg = calculateLeg(distanceToSceen);
-        double distance = calculateDistanceRatio(distanceToSceen, intersection) * leg;
-        double heading = heading(this.getLocationLatLng(), intersection)
-                - map.getCameraPosition().bearing;
-        double aperture = calculateAperture(distanceToSceen, leg);
+        double resolution_ratio = screenResolutionRatio(map, bbox);
+        double distanceToScreen = distanceToScreen(map, intersection); //in pixel
+
+        double leg = calculateLeg(distanceToScreen, resolution_ratio);
+        double distance = calculateDistanceRatio(distanceToScreen, intersection) * leg;
+        double heading = heading(this.getLocationLatLng(), intersection);
+        double aperture = calculateAperture(distanceToScreen, leg) - 9;
+
+
 
         p1 = calculateWedgeEdge(heading, -(aperture/2), distance);
         p2 = calculateWedgeEdge(heading, (aperture/2), distance);
@@ -108,15 +102,13 @@ public class Landmark {
                 .add(p2)
                 .fillColor(Color.parseColor("#00000000"))
                 .strokeColor(Color.parseColor("#990000"));
+        /**
         Log.d("landmark", locationJTS.toString());
-        Log.d("intersection", intersection + "");
         Log.d("Leg", leg + "");
         Log.d("distance", distance + "");
-        Log.d("heading", heading + "");
         Log.d("aperture", aperture + "");
-        Log.d("p1", p1.toString());
-        Log.d("p2", p2.toString());
-        Log.d("bearingmap", map.getCameraPosition().bearing + "");
+        */
+
 
         return polygonOption;
     }
@@ -142,8 +134,8 @@ public class Landmark {
      * @param distanceToScreen distance between target and intersection in pixels
      * @return
      */
-    private double calculateLeg(double distanceToScreen) {
-        double INTRUSION_CONSTANT = 20;
+    private double calculateLeg(double distanceToScreen, double resolution_ratio) {
+        double INTRUSION_CONSTANT = 20 * resolution_ratio;
         double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
         return leg;
     }
@@ -156,8 +148,6 @@ public class Landmark {
 
         PointF landmark_sl = map.getProjection().toScreenLocation(this.locationLatLng);
         PointF intersection_sl = map.getProjection().toScreenLocation(intersection);
-        Log.d("screenlocationlandmark", landmark_sl.toString());
-
         return calculatePixelDistance(landmark_sl, intersection_sl);
     }
 
@@ -168,6 +158,15 @@ public class Landmark {
         dist = Math.sqrt(dx * dx + dy*dy);
 
         return dist;
+    }
+
+    private double screenResolutionRatio(MapboxMap map, VisibleRegion bbox) {
+        double origin_resolution = 208 * 320;
+        double current_resolution = map.getProjection().toScreenLocation(bbox.farRight).x *
+                map.getProjection().toScreenLocation(bbox.nearLeft).y;
+
+        double ratio = current_resolution / origin_resolution;
+        return ratio;
     }
 
     private double heading(LatLng landmark, LatLng border) {
@@ -189,17 +188,20 @@ public class Landmark {
      * Check on what side of the mapbox the off screen location is
      * todo: considering intersection crosses a frame edge
      * @param bbox_borders
-     * @param connection
+     * @param landmark
      * @return
      */
-    private int positionToLocation (List<LineString> bbox_borders, LineString connection) {
-        int position;
-        for (position = 0; position < 4; position++) {
-            if (connection.intersects(bbox_borders.get(position))) {
-                return position;
+    private int positionToLocation (List<LineString> bbox_borders, Point landmark) {
+        int position = 0;
+        double distance = DistanceOp.distance(bbox_borders.get(0), landmark);
+        for (int i = 1; i < 4; i++) {
+            double d = DistanceOp.distance(bbox_borders.get(i), landmark);
+            if (d < distance) {
+                position = i;
+                distance = d;
             }
         }
-        return -1;
+        return position;
     }
 
     private List<LineString> bboxToLineStringsJTS(VisibleRegion bbox) {
@@ -209,10 +211,12 @@ public class Landmark {
         LineString bottom = bbox_border_ls(bbox.nearRight, bbox.nearLeft);
         LineString left = bbox_border_ls(bbox.nearLeft, bbox.farLeft);
 
+        /**
         Log.d("bbox.farLeft", bbox.farLeft.toString());
         Log.d("bbox.farRight", bbox.farRight.toString());
         Log.d("bbox.nearRight", bbox.nearRight.toString());
         Log.d("bbox.nearLeft", bbox.nearLeft.toString());
+        */
 
         bbox_borders.add(top);
         bbox_borders.add(right);
