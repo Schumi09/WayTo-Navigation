@@ -5,7 +5,6 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.location.Location;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -13,8 +12,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
@@ -22,8 +19,6 @@ import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListe
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-
-
 import com.mapbox.directions.DirectionsCriteria;
 import com.mapbox.directions.MapboxDirections;
 import com.mapbox.directions.service.models.DirectionsResponse;
@@ -32,14 +27,12 @@ import com.mapbox.directions.service.models.Waypoint;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polygon;
-import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -60,8 +53,6 @@ import retrofit.Callback;
 import retrofit.Response;
 import retrofit.Retrofit;
 
-import static com.google.android.gms.location.LocationServices.*;
-
 public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
     /**
@@ -78,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 500;
+    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
@@ -100,14 +91,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
-    protected Marker marker_destination = null;
     protected List<Polygon> wedges = new ArrayList<Polygon>();
     /**Münster route waypoints*/
     protected Waypoint origin = new Waypoint(7.6179, 51.96353);
     protected Waypoint destination = new Waypoint(7.60937, 51.96937);
 
     /**Münster Landmarks*/
-    protected Landmark landmark_destination = new Landmark("destination", 7.60937, 51.96937);
     protected Landmark dome = new Landmark("Dom", 7.625776, 51.962999);
     protected Landmark train_station = new Landmark("Train Station", 7.634615, 51.956593);
     protected Landmark buddenturm = new Landmark("Buddenturm", 7.623099, 51.966311);
@@ -115,11 +104,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Landmark institute = new Landmark("Insitut of geoinformatics", 7.595541, 51.969386);
     protected List<Landmark> landmarks = new ArrayList<Landmark>();
     protected List<Marker> on_screen_markers = new ArrayList<Marker>();
-    protected Polygon landmark_destination_wedge = null;
 
-    /**Meckenheim route waypoints
-    protected Waypoint origin = new Waypoint(7.034790, 50.627801);
-    protected Waypoint destination = new Waypoint(7.040636, 50.638532);*/
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
 
@@ -183,25 +168,27 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         //todo: fix layer removing
         if (mMapboxMap != null) {
+            if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
+                for (int a=0; a<wedges.size(); a++){
+                    mMapboxMap.removePolygon(wedges.get(a));
+                }
+                wedges = new ArrayList<>();
+                for (int b=0; b<on_screen_markers.size(); b++){
+                    mMapboxMap.removeMarker(on_screen_markers.get(b));
+                }
+                on_screen_markers = new ArrayList<>();
+            }
+
             if (currentJtsRouteLs != null) {
                 mCurrentLocationSnap = snapLocation(mCurrentLocation);
                 moveCurrentPositionMarker(mCurrentLocationSnap);
             } else {
                 moveCurrentPositionMarker(mCurrentLocation);
             }
-            if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
-                for (int a=0; a<wedges.size(); a++){
-                    mMapboxMap.removePolygon(wedges.get(a));
-                    wedges.remove(a);
-                }
-                for (int b=0; b<on_screen_markers.size(); b++){
-                    mMapboxMap.removeMarker(on_screen_markers.get(b));
-                    on_screen_markers.remove(b);
-                }
-            }
+
             for (int i=0; i<landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
-                if (l.isOffScreen(mMapboxMap) == false) {
+                if (!l.isOffScreen(mMapboxMap)) {
                     on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker(mMapboxMap)));
                 } else {
                     wedges.add(mMapboxMap.addPolygon(l.drawWedge(mMapboxMap)));
@@ -296,7 +283,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      */
     private void moveCurrentPositionMarker(Location location) {
         CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
+                .target(new LatLng(location.getLatitude(), location.getLongitude()))
                 .zoom(15)
                 //.tilt(60)
                 //bearing(mCurrentLocation.getBearing())

@@ -256,4 +256,8 @@ public class Landmark {
         }) == false;
         return isOffScreen;
     }
+
+    public String toString(){
+        return this.name + " at " + this.location.toString();
+    }
 }
