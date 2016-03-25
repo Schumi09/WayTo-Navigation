@@ -202,9 +202,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             for (int i=0; i<landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
                 if (l.isOffScreen(mMapboxMap) == false) {
-                    if (marker_destination == null) {
-                        on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker(mMapboxMap)));
-                    }
+                    on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker(mMapboxMap)));
                 } else {
                     wedges.add(mMapboxMap.addPolygon(l.drawWedge(mMapboxMap)));
                 }
