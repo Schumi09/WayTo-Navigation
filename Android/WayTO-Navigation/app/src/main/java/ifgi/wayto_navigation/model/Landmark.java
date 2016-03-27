@@ -3,7 +3,6 @@ package ifgi.wayto_navigation.model;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.location.Location;
-import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
@@ -83,15 +82,12 @@ public class Landmark {
                 .get(positionToLocation), this.locationJTS)[0];
         LatLng intersection = new LatLng(intersection_coord.x, intersection_coord.y);
 
-        double resolution_ratio = screenResolutionRatio(map, bbox);
         double distanceToScreen = distanceToScreen(map, intersection); //in pixel
-
-        double leg = calculateLeg(distanceToScreen, resolution_ratio);
-        double distance = calculateDistanceRatio(distanceToScreen, intersection) * leg;
+        double leg = calculateLeg(distanceToScreen);
+        double distance_ratio = calculateDistanceRatio(map);
+        double distance = leg * distance_ratio;
         double heading = heading(this.getLocationLatLng(), intersection);
-        double aperture = calculateAperture(distanceToScreen, leg) - 9;
-
-
+        double aperture = calculateAperture(distanceToScreen, leg);
 
         p1 = calculateWedgeEdge(heading, -(aperture/2), distance);
         p2 = calculateWedgeEdge(heading, (aperture/2), distance);
@@ -102,21 +98,19 @@ public class Landmark {
                 .add(p2)
                 .fillColor(Color.parseColor("#00000000"))
                 .strokeColor(Color.parseColor("#990000"));
-        /**
-        Log.d("landmark", locationJTS.toString());
-        Log.d("Leg", leg + "");
-        Log.d("distance", distance + "");
-        Log.d("aperture", aperture + "");
-        */
-
 
         return polygonOption;
     }
 
-    private double calculateDistanceRatio(double pixel_distance, LatLng intersection) {
+    private double calculateDistanceRatio(MapboxMap map) {
         double ratio;
-        double distance_edge_landmark = intersection.distanceTo(this.getLocationLatLng());
-        ratio = distance_edge_landmark / pixel_distance;
+        LatLng screenEdge1_wgs84 = map.getProjection().getVisibleRegion().farLeft;
+        LatLng screenEdge2_wgs84 = map.getProjection().getVisibleRegion().farRight;
+        double distance_wgs84 = screenEdge1_wgs84.distanceTo(screenEdge2_wgs84);
+        PointF screenEdge1_px = map.getProjection().toScreenLocation(screenEdge1_wgs84);
+        PointF screenEdge2_px = map.getProjection().toScreenLocation(screenEdge2_wgs84);
+        double distance_px = calculatePixelDistance(screenEdge1_px, screenEdge2_px);
+        ratio = distance_wgs84 / distance_px;
         return ratio;
     }
 
@@ -134,14 +128,14 @@ public class Landmark {
      * @param distanceToScreen distance between target and intersection in pixels
      * @return
      */
-    private double calculateLeg(double distanceToScreen, double resolution_ratio) {
-        double INTRUSION_CONSTANT = 20 * resolution_ratio;
+    private double calculateLeg(double distanceToScreen) {
+        double INTRUSION_CONSTANT = 20;
         double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
         return leg;
     }
 
     private double calculateAperture(double dist, double leg) {
-        return Math.toDegrees((5 + dist * 0.3) / leg);
+        return Math.toDegrees((5 + dist * 0.2) / leg);
     }
 
     private double distanceToScreen(MapboxMap map, LatLng intersection) {
@@ -153,8 +147,8 @@ public class Landmark {
 
     private double calculatePixelDistance(PointF a, PointF b) {
         double dist;
-        double dx = a.x - a.y;
-        double dy = b.x - b.y;
+        double dx = a.x - b.x;
+        double dy = a.y - b.y;
         dist = Math.sqrt(dx * dx + dy*dy);
 
         return dist;
@@ -211,17 +205,11 @@ public class Landmark {
         LineString bottom = bbox_border_ls(bbox.nearRight, bbox.nearLeft);
         LineString left = bbox_border_ls(bbox.nearLeft, bbox.farLeft);
 
-        /**
-        Log.d("bbox.farLeft", bbox.farLeft.toString());
-        Log.d("bbox.farRight", bbox.farRight.toString());
-        Log.d("bbox.nearRight", bbox.nearRight.toString());
-        Log.d("bbox.nearLeft", bbox.nearLeft.toString());
-        */
-
         bbox_borders.add(top);
         bbox_borders.add(right);
         bbox_borders.add(bottom);
         bbox_borders.add(left);
+
         return bbox_borders;
     }
 

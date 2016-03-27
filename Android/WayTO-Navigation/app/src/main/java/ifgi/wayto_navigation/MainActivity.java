@@ -93,8 +93,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
     protected List<Polygon> wedges = new ArrayList<Polygon>();
     /**Münster route waypoints*/
-    protected Waypoint origin = new Waypoint(7.6179, 51.96353);
-    protected Waypoint destination = new Waypoint(7.60937, 51.96937);
+    protected Waypoint origin = new Waypoint(7.61964, 51.95324);
+    protected Waypoint destination = new Waypoint(7.62478, 51.96547);
 
     /**Münster Landmarks*/
     protected Landmark dome = new Landmark("Dom", 7.625776, 51.962999);
@@ -102,6 +102,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Landmark buddenturm = new Landmark("Buddenturm", 7.623099, 51.966311);
     protected Landmark kapuzinerkloster = new Landmark("Kapuzinerkloster", 7.606970, 51.970665);
     protected Landmark institute = new Landmark("Insitut of geoinformatics", 7.595541, 51.969386);
+    protected Landmark castle = new Landmark("Castle", 7.613166, 51.963613);
+    protected Landmark ludgerikreisel = new Landmark("Ludgerikreisel", 7.626483, 51.955779);
     protected List<Landmark> landmarks = new ArrayList<Landmark>();
     protected List<Marker> on_screen_markers = new ArrayList<Marker>();
 
@@ -126,7 +128,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         landmarks.add(dome);
         landmarks.add(buddenturm);
         landmarks.add(kapuzinerkloster);
-        landmarks.add(institute);
+        landmarks.add(castle);
+        landmarks.add(ludgerikreisel);
 
 
         buildGoogleApiClient();
@@ -144,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 getRoute(origin, destination);
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(51.96937, 7.60937))
-                        .zoom(13)
+                        .zoom(10)
                         .build();
 
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
@@ -166,6 +169,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+
+        if (currentJtsRouteLs != null) {
+            mCurrentLocationSnap = snapLocation(mCurrentLocation);
+            moveCurrentPositionMarker(mCurrentLocationSnap);
+        } else {
+            moveCurrentPositionMarker(mCurrentLocation);
+        }
+
         //todo: fix layer removing
         if (mMapboxMap != null) {
             if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
@@ -177,13 +188,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                     mMapboxMap.removeMarker(on_screen_markers.get(b));
                 }
                 on_screen_markers = new ArrayList<>();
-            }
-
-            if (currentJtsRouteLs != null) {
-                mCurrentLocationSnap = snapLocation(mCurrentLocation);
-                moveCurrentPositionMarker(mCurrentLocationSnap);
-            } else {
-                moveCurrentPositionMarker(mCurrentLocation);
             }
 
             for (int i=0; i<landmarks.size(); i++) {
@@ -282,11 +286,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      * @param location
      */
     private void moveCurrentPositionMarker(Location location) {
+
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(location.getLatitude(), location.getLongitude()))
                 .zoom(15)
                 //.tilt(60)
-                //bearing(mCurrentLocation.getBearing())
+                //.bearing(mCurrentLocation.getBearing())
                 .build();
 
         if (currentPositionMarker != null) {
