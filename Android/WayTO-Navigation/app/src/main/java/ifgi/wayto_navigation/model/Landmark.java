@@ -1,10 +1,12 @@
 package ifgi.wayto_navigation.model;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.location.Location;
 
 import com.google.maps.android.SphericalUtil;
+import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.geometry.ILatLng;
@@ -21,6 +23,8 @@ import com.vividsolutions.jts.operation.distance.DistanceOp;
 import java.util.ArrayList;
 import java.util.List;
 
+import ifgi.wayto_navigation.MainActivity;
+
 
 /**
  * Created by Daniel Schumacher on 18.03.2016.
@@ -28,20 +32,37 @@ import java.util.List;
 public class Landmark {
 
     public String name;
-
-    public String getDescription() {
-        return description;
-    }
-
     public String description;
     public Location location;
+    public Point locationJTS;
+    public LatLng locationLatLng;
+    public Icon on_screen_icon;
+    public Icon off_screen_icon;
+
+    public Icon getOn_screen_icon() {
+        return on_screen_icon;
+    }
+
+    public Icon getOff_screen_icon() {
+        return off_screen_icon;
+    }
+
+    public void setOn_screen_icon(Icon on_screen_icon) {
+        this.on_screen_icon = on_screen_icon;
+    }
+
+    public void setOff_screen_icon(Icon off_screen_icon) {
+        this.off_screen_icon = off_screen_icon;
+    }
+
 
     public Point getLocationJTS() {
         return locationJTS;
     }
 
-    public Point locationJTS;
-    public LatLng locationLatLng;
+    public String getDescription() {
+        return description;
+    }
 
     public Landmark(String lname, double lon, double lat) {
         this.name = lname;
@@ -63,6 +84,7 @@ public class Landmark {
     public LatLng getLocationLatLng() {
         return locationLatLng;
     }
+
 
     public MarkerOptions drawMarker(MapboxMap map) {
         MarkerOptions markerOptions = new MarkerOptions()
@@ -257,4 +279,6 @@ public class Landmark {
     public String toString(){
         return this.name + " at " + this.location.toString();
     }
+
+
 }

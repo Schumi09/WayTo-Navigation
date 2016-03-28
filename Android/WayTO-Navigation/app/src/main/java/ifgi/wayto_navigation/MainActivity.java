@@ -4,10 +4,12 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
@@ -24,6 +26,8 @@ import com.mapbox.directions.MapboxDirections;
 import com.mapbox.directions.service.models.DirectionsResponse;
 import com.mapbox.directions.service.models.DirectionsRoute;
 import com.mapbox.directions.service.models.Waypoint;
+import com.mapbox.mapboxsdk.annotations.Icon;
+import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polygon;
@@ -107,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Landmark ludgerikreisel = new Landmark("Ludgerikreisel", 7.626483, 51.955779);
     protected List<Landmark> landmarks = new ArrayList<Landmark>();
     protected List<Marker> on_screen_markers = new ArrayList<Marker>();
+    protected List<Icon> landmarks_icons = new ArrayList<>();
 
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
@@ -132,6 +137,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         landmarks.add(castle);
         landmarks.add(ludgerikreisel);
 
+        setIcons();
+
 
         buildGoogleApiClient();
         createLocationRequest();
@@ -156,6 +163,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             }
         });
 
+    }
+
+    private void setIcons() {
+        int i;
+        for (i=0; i<landmarks.size(); i++) {
+            String name = landmarks.get(i).name;
+            landmarks.get(i).setOff_screen_icon(getIcon(getIconID(name)));
+        }
     }
 
 
@@ -198,7 +213,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                     Polygon wedge = mMapboxMap.addPolygon(l.drawWedge(mMapboxMap));
                     wedges.add(wedge);
                     LatLng mid_point = wedge.getPoints().get(2);
-                    wedge_markers.add(mMapboxMap.addMarker(new MarkerOptions().position(mid_point)));
+                    wedge_markers.add(mMapboxMap.addMarker(new MarkerOptions().position(mid_point).icon(l.getOff_screen_icon())));
                 }
             }
         }
@@ -297,15 +312,33 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 //.bearing(mCurrentLocation.getBearing())
                 .build();
 
+        MarkerOptions options = new MarkerOptions()
+                .position(new LatLng(location.getLatitude(), location.getLongitude()))
+                .icon(getIcon(R.drawable.my_location));
+
         if (currentPositionMarker != null) {
             mMapboxMap.removeMarker(currentPositionMarker);
-            currentPositionMarker = mMapboxMap.addMarker(new MarkerOptions()
-                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
+            currentPositionMarker = mMapboxMap.addMarker(options);
         } else {
-            currentPositionMarker = mMapboxMap.addMarker(new MarkerOptions()
-                    .position(new LatLng(location.getLatitude(), location.getLongitude())));
+            currentPositionMarker = mMapboxMap.addMarker(options);
         }
         mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
+    private int getIconID(String name){
+        name = "landmark"; //dummy
+        try {
+            return getResources().getIdentifier(name, "drawable", getApplicationContext().getPackageName());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    public Icon getIcon(int id) {
+        IconFactory mIconFactory = IconFactory.getInstance(this);
+        Drawable mIconDrawable = ContextCompat.getDrawable(this, id);
+        return mIconFactory.fromDrawable(mIconDrawable);
     }
 
     /**
