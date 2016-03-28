@@ -28,8 +28,18 @@ import java.util.List;
 public class Landmark {
 
     public String name;
+
+    public String getDescription() {
+        return description;
+    }
+
     public String description;
     public Location location;
+
+    public Point getLocationJTS() {
+        return locationJTS;
+    }
+
     public Point locationJTS;
     public LatLng locationLatLng;
 
@@ -46,24 +56,12 @@ public class Landmark {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public Location getLocation() {
         return location;
     }
 
-    public void setLocation(Location location) {
-        this.location = location;
-    }
-
     public LatLng getLocationLatLng() {
         return locationLatLng;
-    }
-
-    public void setLocationLatLng(LatLng locationLatLng) {
-        this.locationLatLng = locationLatLng;
     }
 
     public MarkerOptions drawMarker(MapboxMap map) {
@@ -85,7 +83,7 @@ public class Landmark {
         double distanceToScreen = distanceToScreen(map, intersection); //in pixel
         double leg = calculateLeg(distanceToScreen);
         double distance_ratio = calculateDistanceRatio(map);
-        double distance = leg * distance_ratio;
+        double distance = (leg * distance_ratio) + 30;
         double heading = heading(this.getLocationLatLng(), intersection);
         double aperture = calculateAperture(distanceToScreen, leg);
 
@@ -135,7 +133,7 @@ public class Landmark {
     }
 
     private double calculateAperture(double dist, double leg) {
-        return Math.toDegrees((5 + dist * 0.2) / leg);
+        return Math.toDegrees((5 + dist * 0.15) / leg);
     }
 
     private double distanceToScreen(MapboxMap map, LatLng intersection) {

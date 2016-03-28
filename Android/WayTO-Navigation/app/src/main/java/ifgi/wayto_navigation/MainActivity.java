@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected String MAPBOX_ACCESS_TOKEN = "";
     private MapView mapView = null;
     private MapboxMap mMapboxMap;
-    private Marker currentPositionMarker = null;
+    private Marker currentPositionMarker;
     private Polyline currentRoutePolyline = null;
 
     protected static final String TAG = "WayTO-Navigation";
@@ -147,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 getRoute(origin, destination);
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(51.96937, 7.60937))
-                        .zoom(10)
+                        .zoom(12)
                         .build();
 
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
@@ -173,11 +173,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         if (currentJtsRouteLs != null) {
             mCurrentLocationSnap = snapLocation(mCurrentLocation);
             moveCurrentPositionMarker(mCurrentLocationSnap);
-        } else {
-            moveCurrentPositionMarker(mCurrentLocation);
         }
 
-        //todo: fix layer removing
         if (mMapboxMap != null) {
             if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
                 for (int a=0; a<wedges.size(); a++){
@@ -290,7 +287,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(location.getLatitude(), location.getLongitude()))
                 .zoom(15)
-                //.tilt(60)
+                //tilt(60)
                 //.bearing(mCurrentLocation.getBearing())
                 .build();
 
