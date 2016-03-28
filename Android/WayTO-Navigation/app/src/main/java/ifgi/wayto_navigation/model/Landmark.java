@@ -72,8 +72,6 @@ public class Landmark {
 
     public PolygonOptions drawWedge(MapboxMap map) {
         VisibleRegion bbox = map.getProjection().getVisibleRegion();
-        LatLng p1;
-        LatLng p2;
         List<LineString> bbox_borders = bboxToLineStringsJTS(bbox);
         int positionToLocation = positionToLocation(bbox_borders, this.locationJTS);
         Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_borders
@@ -87,12 +85,14 @@ public class Landmark {
         double heading = heading(this.getLocationLatLng(), intersection);
         double aperture = calculateAperture(distanceToScreen, leg);
 
-        p1 = calculateWedgeEdge(heading, -(aperture/2), distance);
-        p2 = calculateWedgeEdge(heading, (aperture/2), distance);
+        LatLng p1 = calculateWedgeEdge(heading, -(aperture / 2), distance);
+        LatLng p2 = calculateWedgeEdge(heading, (aperture / 2), distance);
+        LatLng mid_point = calculateMidPoint(p1, p2);
 
         PolygonOptions polygonOption = new PolygonOptions()
                 .add(locationLatLng)
                 .add(p1)
+                .add(mid_point)
                 .add(p2)
                 .fillColor(Color.parseColor("#00000000"))
                 .strokeColor(Color.parseColor("#990000"));
@@ -118,6 +118,17 @@ public class Landmark {
                 this.getLocationLatLng().getLatitude(), this.getLocation().getLongitude());
         com.google.android.gms.maps.model.LatLng googleEdge = SphericalUtil.computeOffset(
                 gLatLngLandmark, dist, heading + angle);
+        return new LatLng(googleEdge.latitude, googleEdge.longitude);
+    }
+
+    private LatLng calculateMidPoint(LatLng p1, LatLng p2){
+        double heading = heading(p1, p2);
+        double half_distance = p1.distanceTo(p2) / 2;
+        com.google.android.gms.maps.model.LatLng gLatLngLandmark = new
+                com.google.android.gms.maps.model.LatLng(
+                p1.getLatitude(), p1.getLongitude());
+        com.google.android.gms.maps.model.LatLng googleEdge = SphericalUtil.computeOffset(
+                gLatLngLandmark, half_distance, heading);
         return new LatLng(googleEdge.latitude, googleEdge.longitude);
     }
 
@@ -161,11 +172,11 @@ public class Landmark {
         return ratio;
     }
 
-    private double heading(LatLng landmark, LatLng border) {
+    private double heading(LatLng coord1, LatLng coord2) {
         com.google.android.gms.maps.model.LatLng p1 = new com.google.android.gms.maps.model.LatLng
-                (landmark.getLatitude(), landmark.getLongitude());
+                (coord1.getLatitude(), coord1.getLongitude());
         com.google.android.gms.maps.model.LatLng p2 = new com.google.android.gms.maps.model.LatLng
-                (border.getLatitude(), border.getLongitude());
+                (coord2.getLatitude(), coord2.getLongitude());
         double heading = SphericalUtil.computeHeading(p1, p2) % 360;
         if (heading < -180) {
             return heading + 360;

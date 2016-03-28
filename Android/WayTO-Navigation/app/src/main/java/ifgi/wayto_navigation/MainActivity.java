@@ -92,6 +92,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Boolean mRequestingLocationUpdates = true;
 
     protected List<Polygon> wedges = new ArrayList<Polygon>();
+    protected List<Marker> wedge_markers = new ArrayList<>();
     /**Münster route waypoints*/
     protected Waypoint origin = new Waypoint(7.61964, 51.95324);
     protected Waypoint destination = new Waypoint(7.62478, 51.96547);
@@ -179,8 +180,10 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
                 for (int a=0; a<wedges.size(); a++){
                     mMapboxMap.removePolygon(wedges.get(a));
+                    mMapboxMap.removeMarker(wedge_markers.get(a));
                 }
                 wedges = new ArrayList<>();
+                wedge_markers = new ArrayList<>();
                 for (int b=0; b<on_screen_markers.size(); b++){
                     mMapboxMap.removeMarker(on_screen_markers.get(b));
                 }
@@ -192,7 +195,10 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 if (!l.isOffScreen(mMapboxMap)) {
                     on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker(mMapboxMap)));
                 } else {
-                    wedges.add(mMapboxMap.addPolygon(l.drawWedge(mMapboxMap)));
+                    Polygon wedge = mMapboxMap.addPolygon(l.drawWedge(mMapboxMap));
+                    wedges.add(wedge);
+                    LatLng mid_point = wedge.getPoints().get(2);
+                    wedge_markers.add(mMapboxMap.addMarker(new MarkerOptions().position(mid_point)));
                 }
             }
         }
