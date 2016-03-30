@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.location.Location;
+import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Icon;
@@ -13,6 +14,7 @@ import com.mapbox.mapboxsdk.geometry.ILatLng;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.Projection;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -36,6 +38,7 @@ public class Landmark {
     public Location location;
     public Point locationJTS;
     public LatLng locationLatLng;
+    public PointF locationScreen;
     public Icon on_screen_icon;
     public Icon off_screen_icon;
 
@@ -94,17 +97,23 @@ public class Landmark {
 
     public PolygonOptions drawWedge(MapboxMap map) {
         VisibleRegion bbox = map.getProjection().getVisibleRegion();
-        List<LineString> bbox_borders = bboxToLineStringsJTS(bbox);
-        int positionToLocation = positionToLocation(bbox_borders, this.locationJTS);
+        List<LineString> bbox_borders = bboxToLineStringsJTS(bbox, map);
+        int positionToLocation = positionToLocation(bbox_borders, map);
+        this.locationScreen = map.getProjection().toScreenLocation(this.locationLatLng);
+        Point landmark_sl = new GeometryFactory().createPoint(
+                new Coordinate(this.locationScreen.x, this.locationScreen.y));
+
         Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_borders
-                .get(positionToLocation), this.locationJTS)[0];
-        LatLng intersection = new LatLng(intersection_coord.x, intersection_coord.y);
+                .get(positionToLocation), landmark_sl)[0];
+        LatLng intersection = map.getProjection().fromScreenLocation(
+                new PointF((float)intersection_coord.x, (float)intersection_coord.y));
 
         double distanceToScreen = distanceToScreen(map, intersection); //in pixel
         double leg = calculateLeg(distanceToScreen);
         double distance_ratio = calculateDistanceRatio(map);
-        double distance = (leg * distance_ratio) + 30;
-        double heading = heading(this.getLocationLatLng(), intersection);
+        double distance = (leg * distance_ratio) + 20;
+        double map_orientation = map.getCameraPosition().bearing;
+        double heading = heading(this.getLocationLatLng(), intersection);// - map_orientation;
         double aperture = calculateAperture(distanceToScreen, leg);
 
         LatLng p1 = calculateWedgeEdge(heading, -(aperture / 2), distance);
@@ -160,7 +169,7 @@ public class Landmark {
      * @return
      */
     private double calculateLeg(double distanceToScreen) {
-        double INTRUSION_CONSTANT = 20;
+        double INTRUSION_CONSTANT = 200;
         double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
         return leg;
     }
@@ -199,28 +208,33 @@ public class Landmark {
                 (coord1.getLatitude(), coord1.getLongitude());
         com.google.android.gms.maps.model.LatLng p2 = new com.google.android.gms.maps.model.LatLng
                 (coord2.getLatitude(), coord2.getLongitude());
-        double heading = SphericalUtil.computeHeading(p1, p2) % 360;
+        double heading = SphericalUtil.computeHeading(p1, p2);
+        return heading;
+        /**
         if (heading < -180) {
             return heading + 360;
         } else if (heading > 180) {
             return heading - 360;
         } else {
             return heading;
-        }
+        }*/
     }
 
     /**
      * Check on what side of the mapbox the off screen location is
      * todo: considering intersection crosses a frame edge
      * @param bbox_borders
-     * @param landmark
+     * @param map
      * @return
      */
-    private int positionToLocation (List<LineString> bbox_borders, Point landmark) {
+    private int positionToLocation (List<LineString> bbox_borders, MapboxMap map) {
+        Projection projection = map.getProjection();
+        PointF screen_location = projection.toScreenLocation(this.locationLatLng);
+        Point loc = new GeometryFactory().createPoint(new Coordinate(screen_location.x, screen_location.y));
         int position = 0;
-        double distance = DistanceOp.distance(bbox_borders.get(0), landmark);
+        double distance = DistanceOp.distance(bbox_borders.get(0), loc);
         for (int i = 1; i < 4; i++) {
-            double d = DistanceOp.distance(bbox_borders.get(i), landmark);
+            double d = DistanceOp.distance(bbox_borders.get(i), loc);
             if (d < distance) {
                 position = i;
                 distance = d;
@@ -229,12 +243,27 @@ public class Landmark {
         return position;
     }
 
-    private List<LineString> bboxToLineStringsJTS(VisibleRegion bbox) {
-        List<LineString> bbox_borders = new ArrayList<LineString>();
-        LineString top = bbox_border_ls(bbox.farLeft, bbox.farRight);
-        LineString right = bbox_border_ls(bbox.farRight, bbox.nearRight);
-        LineString bottom = bbox_border_ls(bbox.nearRight, bbox.nearLeft);
-        LineString left = bbox_border_ls(bbox.nearLeft, bbox.farLeft);
+
+    /**
+    private List<LineString> bbbox_bordersToSL(List<LineString> bbox) {
+        List<LineString> bbox_sl = new ArrayList<>();
+        for (int i=0; i < 3; i++) {
+            LineString ls = bbox.get(i);
+            Point sp = ls.getStartPoint();
+            Point sp_sl = new GeometryFactory().createPoint(new Co)
+            Point ep = ls.getEndPoint();
+
+
+        }
+        return bbox_sl;
+    }*/
+
+    private List<LineString> bboxToLineStringsJTS(VisibleRegion bbox, MapboxMap map) {
+        List<LineString> bbox_borders = new ArrayList<>();
+        LineString top = bbox_border_ls(bbox.farLeft, bbox.farRight, map.getProjection());
+        LineString right = bbox_border_ls(bbox.farRight, bbox.nearRight, map.getProjection());
+        LineString bottom = bbox_border_ls(bbox.nearRight, bbox.nearLeft, map.getProjection());
+        LineString left = bbox_border_ls(bbox.nearLeft, bbox.farLeft, map.getProjection());
 
         bbox_borders.add(top);
         bbox_borders.add(right);
@@ -244,14 +273,15 @@ public class Landmark {
         return bbox_borders;
     }
 
-    private LineString bbox_border_ls(LatLng p1, LatLng p2) {
-        Coordinate coord1 = new Coordinate(p1.getLatitude(),p1.getLongitude());
-        Coordinate coord2 = new Coordinate(p2.getLatitude(),p2.getLongitude());
+    private LineString bbox_border_ls(LatLng p1, LatLng p2, Projection proj) {
+        PointF p1_sl = proj.toScreenLocation(p1);
+        PointF p2_sl = proj.toScreenLocation(p2);
+        Coordinate coord1 = new Coordinate(p1_sl.x,p1_sl.y);
+        Coordinate coord2 = new Coordinate(p2_sl.x,p2_sl.y);
         Coordinate[] coords = new Coordinate[2];
         coords[0] = coord1;
         coords[1] = coord2;
-        LineString ls = new GeometryFactory(new PrecisionModel(
-                PrecisionModel.FLOATING), 4326).createLineString(coords);
+        LineString ls = new GeometryFactory().createLineString(coords);
         return ls;
     }
 
