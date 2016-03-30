@@ -94,6 +94,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected LocationRequest mLocationRequest;
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
+    protected double mCurrentBearing = 361;
+    protected final int BEARING_THRESHOLD = 5;
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
@@ -193,6 +195,10 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         if (currentJtsRouteLs != null) {
             mCurrentLocationSnap = snapLocation(mCurrentLocation);
             moveCurrentPositionMarker(mCurrentLocationSnap);
+        }
+
+        if (mCurrentBearing == 361) {
+            mCurrentBearing = mCurrentLocation.getBearing();
         }
 
         if (mMapboxMap != null) {
@@ -315,12 +321,15 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      */
     private void moveCurrentPositionMarker(Location location) {
 
+        if (Math.abs(mCurrentBearing - location.getBearing()) > BEARING_THRESHOLD) {
+            mCurrentBearing = location.getBearing();
+        }
+
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(location.getLatitude(), location.getLongitude()))
                 .zoom(15)
-                .bearing(mCurrentLocation.getBearing())
+                .bearing(mCurrentBearing)
                 .build();
-
 
         MarkerOptions options = new MarkerOptions()
                 .position(new LatLng(location.getLatitude(), location.getLongitude()))
