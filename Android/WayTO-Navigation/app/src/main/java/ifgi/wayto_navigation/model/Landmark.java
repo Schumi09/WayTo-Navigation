@@ -19,11 +19,14 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
+import com.vividsolutions.jts.geom.impl.CoordinateArraySequence;
 import com.vividsolutions.jts.operation.distance.DistanceOp;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import ifgi.wayto_navigation.MainActivity;
 
@@ -285,25 +288,19 @@ public class Landmark {
         return ls;
     }
 
+    
     public boolean isOffScreen(MapboxMap map) {
         VisibleRegion bbox = map.getProjection().getVisibleRegion();
-        boolean isOffScreen = bbox.latLngBounds.including(new ILatLng() {
-            @Override
-            public double getLatitude() {
-                return location.getLatitude();
-            }
+        Coordinate[] coordinates = new Coordinate[5];
+        coordinates[0] = new Coordinate(bbox.farLeft.getLatitude(), bbox.farLeft.getLongitude());
+        coordinates[1] = new Coordinate(bbox.farRight.getLatitude(), bbox.farRight.getLongitude());
+        coordinates[2] = new Coordinate(bbox.nearRight.getLatitude(), bbox.nearRight.getLongitude());
+        coordinates[3] = new Coordinate(bbox.nearLeft.getLatitude(), bbox.nearLeft.getLongitude());
+        coordinates[4] = new Coordinate(bbox.farLeft.getLatitude(), bbox.farLeft.getLongitude());
 
-            @Override
-            public double getLongitude() {
-                return location.getLongitude();
-            }
 
-            @Override
-            public double getAltitude() {
-                return location.getAltitude();
-            }
-        }) == false;
-        return isOffScreen;
+        Polygon bbox_polygon = new GeometryFactory().createPolygon(coordinates);
+        return !bbox_polygon.contains(this.locationJTS);
     }
 
     public String toString(){
