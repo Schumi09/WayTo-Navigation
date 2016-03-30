@@ -31,12 +31,14 @@ import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polygon;
+import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -174,6 +176,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
 
+    Polygon bbox;
+
     /**
      * onLocationChanged event.
      * Once the location has changed a marker displays the user's current position and updates the
@@ -192,6 +196,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         }
 
         if (mMapboxMap != null) {
+            VisibleRegion area = mMapboxMap.getProjection().getVisibleRegion();
+            if (bbox !=null){
+                mMapboxMap.removePolygon(bbox);
+            }
+            bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
+            .add(area.farRight).add(area.nearRight).add(area.nearLeft).fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
             if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
                 for (int a=0; a<wedges.size(); a++){
                     mMapboxMap.removePolygon(wedges.get(a));
@@ -308,9 +318,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(location.getLatitude(), location.getLongitude()))
                 .zoom(15)
-                //tilt(60)
-                //.bearing(mCurrentLocation.getBearing())
+                .bearing(mCurrentLocation.getBearing())
                 .build();
+
 
         MarkerOptions options = new MarkerOptions()
                 .position(new LatLng(location.getLatitude(), location.getLongitude()))
