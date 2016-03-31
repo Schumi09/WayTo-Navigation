@@ -98,16 +98,28 @@ public class Landmark {
         return markerOptions;
     }
 
+
+    /**
+     * Wedge Off-Screen visualization for distant landmarks
+     * Reference: Sean Gustafson, Patrick Baudisch, Carl Gutwin, and Pourang Irani. 2008.
+     * Wedge: clutter-free visualization of off-screen locations.
+     * In Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI '08).
+     * ACM, New York, NY, USA, 787-796. DOI=http://dx.doi.org/10.1145/1357054.1357179
+     * todo: Calculate intersection point via bbox-polygon/landmark position
+     * @param map Current MapboxMap object
+     * @return MapBox Polygon Object
+     */
     public PolygonOptions drawWedge(MapboxMap map) {
         VisibleRegion bbox = map.getProjection().getVisibleRegion();
+        /**
         List<LineString> bbox_borders = bboxToLineStringsJTS(bbox, map);
-        int positionToLocation = positionToLocation(bbox_borders, map);
+        int positionToLocation = positionToLocation(bbox_borders, map);*/
+        Polygon bbox_new = wedgeBboxPolygon(map);
         this.locationScreen = map.getProjection().toScreenLocation(this.locationLatLng);
         Point landmark_sl = new GeometryFactory().createPoint(
                 new Coordinate(this.locationScreen.x, this.locationScreen.y));
 
-        Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_borders
-                .get(positionToLocation), landmark_sl)[0];
+        Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_new, landmark_sl)[0];
         LatLng intersection = map.getProjection().fromScreenLocation(
                 new PointF((float)intersection_coord.x, (float)intersection_coord.y));
 
@@ -115,7 +127,7 @@ public class Landmark {
         double leg = calculateLeg(distanceToScreen);
         double distance_ratio = calculateDistanceRatio(map);
         double distance = (leg * distance_ratio) + 20;
-        double map_orientation = map.getCameraPosition().bearing;
+        //double map_orientation = map.getCameraPosition().bearing;
         double heading = heading(this.getLocationLatLng(), intersection);// - map_orientation;
         double aperture = calculateAperture(distanceToScreen, leg);
 
@@ -193,7 +205,6 @@ public class Landmark {
         double dx = a.x - b.x;
         double dy = a.y - b.y;
         dist = Math.sqrt(dx * dx + dy*dy);
-
         return dist;
     }
 
@@ -201,7 +212,6 @@ public class Landmark {
         double origin_resolution = 208 * 320;
         double current_resolution = map.getProjection().toScreenLocation(bbox.farRight).x *
                 map.getProjection().toScreenLocation(bbox.nearLeft).y;
-
         double ratio = current_resolution / origin_resolution;
         return ratio;
     }
@@ -288,8 +298,7 @@ public class Landmark {
         return ls;
     }
 
-    
-    public boolean isOffScreen(MapboxMap map) {
+    private Polygon getBboxPolygonJTS(MapboxMap map) {
         VisibleRegion bbox = map.getProjection().getVisibleRegion();
         Coordinate[] coordinates = new Coordinate[5];
         coordinates[0] = new Coordinate(bbox.farLeft.getLatitude(), bbox.farLeft.getLongitude());
@@ -297,15 +306,56 @@ public class Landmark {
         coordinates[2] = new Coordinate(bbox.nearRight.getLatitude(), bbox.nearRight.getLongitude());
         coordinates[3] = new Coordinate(bbox.nearLeft.getLatitude(), bbox.nearLeft.getLongitude());
         coordinates[4] = new Coordinate(bbox.farLeft.getLatitude(), bbox.farLeft.getLongitude());
+        return new GeometryFactory().createPolygon(coordinates);
+    }
+
+    private Polygon wedgeBboxPolygon(MapboxMap map) {
+        double ratio = 0.08;
+        Projection proj = map.getProjection();
+        VisibleRegion bbox = proj.getVisibleRegion();
+        Coordinate[] coordinates = new Coordinate[4];
+        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, proj);
+        coordinates[1] = latLngToSLCoordinate(bbox.farRight, proj);
+        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, proj);
+        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, proj);
+        double LONG_OFFSET = coordinates[1].x * ratio;
+        double SHORT_OFFSET = coordinates[3].y * ratio;
+
+        Coordinate[] new_coordinates = new Coordinate[9];
+        new_coordinates[0] = coordinates[0];
+        new_coordinates[0].x += LONG_OFFSET;
+        new_coordinates[1] = coordinates[1];
+        new_coordinates[1].x -= LONG_OFFSET;
+        new_coordinates[2] = coordinates[1];
+        new_coordinates[2].x += SHORT_OFFSET;
+        new_coordinates[3] = coordinates[2];
+        new_coordinates[3].x -= SHORT_OFFSET;
+        new_coordinates[4] = coordinates[2];
+        new_coordinates[4].x -= LONG_OFFSET;
+        new_coordinates[5] = coordinates[3];
+        new_coordinates[5].x += LONG_OFFSET;
+        new_coordinates[6] = coordinates[3];
+        new_coordinates[6].y -= SHORT_OFFSET;
+        new_coordinates[7] = coordinates[3];
+        new_coordinates[7].y += SHORT_OFFSET;
+        new_coordinates[8] = new_coordinates[0];
+
+        return new GeometryFactory().createPolygon(new_coordinates);
 
 
-        Polygon bbox_polygon = new GeometryFactory().createPolygon(coordinates);
+    }
+
+    private Coordinate latLngToSLCoordinate (LatLng latLng, Projection projection) {
+        PointF p = projection.toScreenLocation(latLng);
+        return new Coordinate(p.x, p.y);
+    }
+
+    public boolean isOffScreen(MapboxMap map) {
+        Polygon bbox_polygon = getBboxPolygonJTS(map);
         return !bbox_polygon.contains(this.locationJTS);
     }
 
     public String toString(){
         return this.name + " at " + this.location.toString();
     }
-
-
 }
