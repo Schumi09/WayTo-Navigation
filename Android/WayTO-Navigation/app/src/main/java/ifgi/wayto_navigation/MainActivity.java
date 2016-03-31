@@ -42,6 +42,8 @@ import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.mapboxsdk.maps.UiSettings;
+import com.mapbox.mapboxsdk.maps.widgets.CompassView;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -95,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
     protected double mCurrentBearing = 361;
-    protected final int BEARING_THRESHOLD = 5;
+    protected final int BEARING_THRESHOLD = 15;
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
@@ -156,6 +158,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             @Override
             public void onMapReady(@NonNull MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
+                mapboxMap.getUiSettings().setCompassEnabled(false);
+                mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
+                mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
                 getRoute(origin, destination);
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(51.96937, 7.60937))
