@@ -1,16 +1,13 @@
 package ifgi.wayto_navigation.model;
 
-import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.location.Location;
-import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.PolygonOptions;
-import com.mapbox.mapboxsdk.geometry.ILatLng;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
@@ -20,15 +17,10 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
-import com.vividsolutions.jts.geom.PrecisionModel;
-import com.vividsolutions.jts.geom.impl.CoordinateArraySequence;
 import com.vividsolutions.jts.operation.distance.DistanceOp;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-
-import ifgi.wayto_navigation.MainActivity;
 
 
 /**
@@ -110,16 +102,16 @@ public class Landmark {
      * @return MapBox Polygon Object
      */
     public PolygonOptions drawWedge(MapboxMap map) {
-        VisibleRegion bbox = map.getProjection().getVisibleRegion();
-        /**
-        List<LineString> bbox_borders = bboxToLineStringsJTS(bbox, map);
-        int positionToLocation = positionToLocation(bbox_borders, map);*/
+        Polygon bbox_px = bboxPolygonSl(map);
         Polygon bbox_new = wedgeBboxPolygon(map);
         this.locationScreen = map.getProjection().toScreenLocation(this.locationLatLng);
         Point landmark_sl = new GeometryFactory().createPoint(
-                new Coordinate(this.locationScreen.x, this.locationScreen.y));
+            new Coordinate(this.locationScreen.x, this.locationScreen.y));
 
-        Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_new, landmark_sl)[0];
+        Coordinate intersection_heading_coord = DistanceOp.nearestPoints(bbox_new, landmark_sl)[0];
+        LatLng intersection_heading = map.getProjection().fromScreenLocation(
+                new PointF((float)intersection_heading_coord.x, (float)intersection_heading_coord.y));
+        Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_px, landmark_sl)[0];
         LatLng intersection = map.getProjection().fromScreenLocation(
                 new PointF((float)intersection_coord.x, (float)intersection_coord.y));
 
@@ -128,7 +120,7 @@ public class Landmark {
         double distance_ratio = calculateDistanceRatio(map);
         double distance = (leg * distance_ratio) + 20;
         //double map_orientation = map.getCameraPosition().bearing;
-        double heading = heading(this.getLocationLatLng(), intersection);// - map_orientation;
+        double heading = heading(this.getLocationLatLng(), intersection_heading);// - map_orientation;
         double aperture = calculateAperture(distanceToScreen, leg);
 
         LatLng p1 = calculateWedgeEdge(heading, -(aperture / 2), distance);
@@ -309,15 +301,14 @@ public class Landmark {
         return new GeometryFactory().createPolygon(coordinates);
     }
 
+    private Polygon bboxPolygonSl(MapboxMap map) {
+        Coordinate[] coordinates = bboxCoordsSL(map);
+        return new GeometryFactory().createPolygon(coordinates);
+    }
+
     private Polygon wedgeBboxPolygon(MapboxMap map) {
         double ratio = 0.08;
-        Projection proj = map.getProjection();
-        VisibleRegion bbox = proj.getVisibleRegion();
-        Coordinate[] coordinates = new Coordinate[4];
-        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, proj);
-        coordinates[1] = latLngToSLCoordinate(bbox.farRight, proj);
-        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, proj);
-        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, proj);
+        Coordinate[] coordinates = bboxCoordsSL(map);
         double LONG_OFFSET = coordinates[1].x * ratio;
         double SHORT_OFFSET = coordinates[3].y * ratio;
 
@@ -343,6 +334,19 @@ public class Landmark {
         return new GeometryFactory().createPolygon(new_coordinates);
 
 
+    }
+
+    private Coordinate[] bboxCoordsSL(MapboxMap map) {
+        Projection proj = map.getProjection();
+        VisibleRegion bbox = proj.getVisibleRegion();
+        Coordinate[] coordinates = new Coordinate[5];
+        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, proj);
+        coordinates[1] = latLngToSLCoordinate(bbox.farRight, proj);
+        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, proj);
+        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, proj);
+        coordinates[4] = latLngToSLCoordinate(bbox.farLeft, proj);
+
+        return coordinates;
     }
 
     private Coordinate latLngToSLCoordinate (LatLng latLng, Projection projection) {
