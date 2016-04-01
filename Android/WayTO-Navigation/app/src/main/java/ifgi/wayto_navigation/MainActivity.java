@@ -161,6 +161,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 mapboxMap.getUiSettings().setCompassEnabled(false);
                 mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
                 mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
+                mapboxMap.getUiSettings().setAttributionEnabled(false);
                 getRoute(origin, destination);
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(51.96937, 7.60937))
