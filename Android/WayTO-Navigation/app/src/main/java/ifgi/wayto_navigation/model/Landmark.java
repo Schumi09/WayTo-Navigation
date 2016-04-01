@@ -37,6 +37,8 @@ public class Landmark {
     public Icon on_screen_icon;
     public Icon off_screen_icon;
 
+    private static double WEDGE_CORNER_RATIO = 0.15;
+
     public Icon getOn_screen_icon() {
         return on_screen_icon;
     }
@@ -118,7 +120,7 @@ public class Landmark {
         double distanceToScreen = distanceToScreen(map, intersection); //in pixel
         double leg = calculateLeg(distanceToScreen);
         double distance_ratio = calculateDistanceRatio(map);
-        double distance = (leg * distance_ratio) + 20;
+        double distance = (leg * distance_ratio) + 50;
         //double map_orientation = map.getCameraPosition().bearing;
         double heading = heading(this.getLocationLatLng(), intersection_heading);// - map_orientation;
         double aperture = calculateAperture(distanceToScreen, leg);
@@ -176,13 +178,13 @@ public class Landmark {
      * @return
      */
     private double calculateLeg(double distanceToScreen) {
-        double INTRUSION_CONSTANT = 200;
+        double INTRUSION_CONSTANT = 150;
         double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
         return leg;
     }
 
     private double calculateAperture(double dist, double leg) {
-        return Math.toDegrees((5 + dist * 0.15) / leg);
+        return Math.toDegrees((5 + dist * 0.1) / leg);
     }
 
     private double distanceToScreen(MapboxMap map, LatLng intersection) {
@@ -307,10 +309,9 @@ public class Landmark {
     }
 
     private Polygon wedgeBboxPolygon(MapboxMap map) {
-        double ratio = 0.08;
         Coordinate[] coordinates = bboxCoordsSL(map);
-        double LONG_OFFSET = coordinates[1].x * ratio;
-        double SHORT_OFFSET = coordinates[3].y * ratio;
+        double LONG_OFFSET = coordinates[1].x * WEDGE_CORNER_RATIO  * 0.5;
+        double SHORT_OFFSET = coordinates[3].y * WEDGE_CORNER_RATIO;
 
         Coordinate[] new_coordinates = new Coordinate[9];
         new_coordinates[0] = coordinates[0];
@@ -318,9 +319,9 @@ public class Landmark {
         new_coordinates[1] = coordinates[1];
         new_coordinates[1].x -= LONG_OFFSET;
         new_coordinates[2] = coordinates[1];
-        new_coordinates[2].x += SHORT_OFFSET;
+        new_coordinates[2].y += SHORT_OFFSET;
         new_coordinates[3] = coordinates[2];
-        new_coordinates[3].x -= SHORT_OFFSET;
+        new_coordinates[3].y -= SHORT_OFFSET;
         new_coordinates[4] = coordinates[2];
         new_coordinates[4].x -= LONG_OFFSET;
         new_coordinates[5] = coordinates[3];
@@ -332,8 +333,6 @@ public class Landmark {
         new_coordinates[8] = new_coordinates[0];
 
         return new GeometryFactory().createPolygon(new_coordinates);
-
-
     }
 
     private Coordinate[] bboxCoordsSL(MapboxMap map) {
