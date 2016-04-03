@@ -37,7 +37,7 @@ public class Landmark {
     public Icon on_screen_icon;
     public Icon off_screen_icon;
 
-    private static double WEDGE_CORNER_RATIO = 0.15;
+    private static double WEDGE_CORNER_RATIO = 0.1;
 
     public Icon getOn_screen_icon() {
         return on_screen_icon;
@@ -86,10 +86,18 @@ public class Landmark {
     }
 
 
-    public MarkerOptions drawMarker(MapboxMap map) {
-        MarkerOptions markerOptions = new MarkerOptions()
-                .position(new LatLng(this.location.getLatitude(), this.location.getLongitude()));
-        return markerOptions;
+    public MarkerOptions drawWedgeMarker(com.mapbox.mapboxsdk.annotations.Polygon polygon) {
+        LatLng mid_point = polygon.getPoints().get(2);
+        return new MarkerOptions()
+                .position(
+                        new LatLng(mid_point.getLatitude(), mid_point.getLongitude()))
+                .icon(this.off_screen_icon);
+    }
+
+    public MarkerOptions drawMarker() {
+            return new MarkerOptions()
+                    .position(
+                            new LatLng(this.location.getLatitude(), this.location.getLongitude()));
     }
 
 
@@ -104,8 +112,9 @@ public class Landmark {
      * @return MapBox Polygon Object
      */
     public PolygonOptions drawWedge(MapboxMap map) {
-        Polygon bbox_px = bboxPolygonSl(map);
-        Polygon bbox_new = wedgeBboxPolygon(map);
+        Coordinate[] bbox_px_coords = bboxPolygonSl(map);
+        Polygon bbox_new = wedgeBboxPolygon(bbox_px_coords);
+        Polygon bbox_px = new GeometryFactory().createPolygon(bbox_px_coords);
         this.locationScreen = map.getProjection().toScreenLocation(this.locationLatLng);
         Point landmark_sl = new GeometryFactory().createPoint(
             new Coordinate(this.locationScreen.x, this.locationScreen.y));
@@ -120,7 +129,7 @@ public class Landmark {
         double distanceToScreen = distanceToScreen(map, intersection); //in pixel
         double leg = calculateLeg(distanceToScreen);
         double distance_ratio = calculateDistanceRatio(map);
-        double distance = (leg * distance_ratio) + 50;
+        double distance = (leg * distance_ratio) + 40;
         //double map_orientation = map.getCameraPosition().bearing;
         double heading = heading(this.getLocationLatLng(), intersection_heading);// - map_orientation;
         double aperture = calculateAperture(distanceToScreen, leg);
@@ -178,7 +187,7 @@ public class Landmark {
      * @return
      */
     private double calculateLeg(double distanceToScreen) {
-        double INTRUSION_CONSTANT = 150;
+        double INTRUSION_CONSTANT = 200;
         double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
         return leg;
     }
@@ -303,15 +312,14 @@ public class Landmark {
         return new GeometryFactory().createPolygon(coordinates);
     }
 
-    private Polygon bboxPolygonSl(MapboxMap map) {
+    private Coordinate[] bboxPolygonSl(MapboxMap map) {
         Coordinate[] coordinates = bboxCoordsSL(map);
-        return new GeometryFactory().createPolygon(coordinates);
+        return coordinates;
     }
 
-    private Polygon wedgeBboxPolygon(MapboxMap map) {
-        Coordinate[] coordinates = bboxCoordsSL(map);
-        double LONG_OFFSET = coordinates[1].x * WEDGE_CORNER_RATIO  * 0.5;
-        double SHORT_OFFSET = coordinates[3].y * WEDGE_CORNER_RATIO;
+    private Polygon wedgeBboxPolygon(Coordinate[] coordinates) {
+        double LONG_OFFSET = coordinates[1].x * WEDGE_CORNER_RATIO  * 0.25;
+        double SHORT_OFFSET = coordinates[2].y * WEDGE_CORNER_RATIO;
 
         Coordinate[] new_coordinates = new Coordinate[9];
         new_coordinates[0] = coordinates[0];
@@ -343,7 +351,7 @@ public class Landmark {
         coordinates[1] = latLngToSLCoordinate(bbox.farRight, proj);
         coordinates[2] = latLngToSLCoordinate(bbox.nearRight, proj);
         coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, proj);
-        coordinates[4] = latLngToSLCoordinate(bbox.farLeft, proj);
+        coordinates[4] = coordinates[0];
 
         return coordinates;
     }

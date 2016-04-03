@@ -6,6 +6,7 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -42,8 +43,6 @@ import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
-import com.mapbox.mapboxsdk.maps.UiSettings;
-import com.mapbox.mapboxsdk.maps.widgets.CompassView;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -101,7 +100,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
-    protected List<Polygon> wedges = new ArrayList<Polygon>();
+
+    protected List<Landmark> offscreen_landmarks = new ArrayList<>();
+    protected List<Polygon> wedges = new ArrayList<>();
     protected List<Marker> wedge_markers = new ArrayList<>();
     /**Münster route waypoints*/
     protected Waypoint origin = new Waypoint(7.61964, 51.95324);
@@ -208,12 +209,18 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         }
 
         if (mMapboxMap != null) {
-            VisibleRegion area = mMapboxMap.getProjection().getVisibleRegion();
+
+            /**
+             * VisibleRegion area = mMapboxMap.getProjection().getVisibleRegion();
             if (bbox !=null){
                 mMapboxMap.removePolygon(bbox);
             }
             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
-            .add(area.farRight).add(area.nearRight).add(area.nearLeft).fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
+            .add(area.farRight).add(area.nearRight).add(area.nearLeft)
+             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));*/
+
+            offscreen_landmarks = new ArrayList<>();
+
             if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
                 for (int a=0; a<wedges.size(); a++){
                     mMapboxMap.removePolygon(wedges.get(a));
@@ -230,17 +237,36 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             for (int i=0; i<landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
                 if (!l.isOffScreen(mMapboxMap)) {
-                    on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker(mMapboxMap)));
+                    on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker()));
                 } else {
-                    Polygon wedge = mMapboxMap.addPolygon(l.drawWedge(mMapboxMap));
-                    wedges.add(wedge);
-                    LatLng mid_point = wedge.getPoints().get(2);
-                    wedge_markers.add(mMapboxMap.addMarker(new MarkerOptions().position(mid_point).icon(l.getOff_screen_icon())));
+                    offscreen_landmarks.add(l);
                 }
             }
+            new drawWedgesTask().execute(offscreen_landmarks);
         }
     }
 
+    private class drawWedgesTask extends AsyncTask<List<Landmark>, Void, List<PolygonOptions>> {
+
+        @Override
+        protected List<PolygonOptions> doInBackground(List<Landmark>... params) {
+            List<Landmark> landmarks = params[0];
+            List<PolygonOptions> list = new ArrayList<>();
+            for (int i=0; i<landmarks.size(); i++) {
+                list.add(landmarks.get(i).drawWedge(mMapboxMap));
+            }
+            return list;
+        }
+
+        protected void onPostExecute(List<PolygonOptions> list) {
+            for (int i=0; i<list.size(); i++) {
+                Polygon wedge = mMapboxMap.addPolygon(list.get(i));
+                wedges.add(wedge);
+                wedge_markers.add(mMapboxMap.addMarker(
+                        offscreen_landmarks.get(i).drawWedgeMarker(wedge)));
+            }
+        }
+    }
 
     private void routeToJtsLineString(DirectionsRoute route) {
 
