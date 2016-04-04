@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         /** Create a mapView and give it some properties */
         mapView = (MapView) findViewById(R.id.mapview);
-        mapView.setStyleUrl(Style.MAPBOX_STREETS);
+        mapView.setStyleUrl("mapbox://styles/schumi91/cimm7mq0i009dzpmckjmo8u4u");
         mapView.onCreate(savedInstanceState);
 
         mapView.getMapAsync(new OnMapReadyCallback() {
