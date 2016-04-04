@@ -27,6 +27,7 @@ import com.mapbox.directions.MapboxDirections;
 import com.mapbox.directions.service.models.DirectionsResponse;
 import com.mapbox.directions.service.models.DirectionsRoute;
 import com.mapbox.directions.service.models.Waypoint;
+import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
@@ -76,7 +77,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
+    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 5000;
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
@@ -85,10 +86,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
 
-    // Keys for storing activity state in the Bundle.
-    protected final static String REQUESTING_LOCATION_UPDATES_KEY = "requesting-location-updates-key";
-    protected final static String LOCATION_KEY = "location-key";
-    protected final static String LAST_UPDATED_TIME_STRING_KEY = "last-updated-time-string-key";
 
     protected GoogleApiClient mGoogleApiClient;
 
@@ -96,7 +93,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
     protected double mCurrentBearing = 361;
-    protected final int BEARING_THRESHOLD = 15;
+    protected final int BEARING_THRESHOLD = 30;
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
 
@@ -104,6 +101,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected List<Landmark> offscreen_landmarks = new ArrayList<>();
     protected List<Polygon> wedges = new ArrayList<>();
     protected List<Marker> wedge_markers = new ArrayList<>();
+    private List<Polygon> wedges_old;
+    private List<Marker> wedge_markers_old;
     /**Münster route waypoints*/
     protected Waypoint origin = new Waypoint(7.61964, 51.95324);
     protected Waypoint destination = new Waypoint(7.62478, 51.96547);
@@ -185,7 +184,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
 
-    Polygon bbox;
 
     /**
      * onLocationChanged event.
@@ -222,16 +220,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             offscreen_landmarks = new ArrayList<>();
 
             if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
-                for (int a=0; a<wedges.size(); a++){
-                    mMapboxMap.removePolygon(wedges.get(a));
-                    mMapboxMap.removeMarker(wedge_markers.get(a));
-                }
+                wedges_old = wedges;
+                wedge_markers_old = wedge_markers;
                 wedges = new ArrayList<>();
                 wedge_markers = new ArrayList<>();
-                for (int b=0; b<on_screen_markers.size(); b++){
-                    mMapboxMap.removeMarker(on_screen_markers.get(b));
-                }
+                mMapboxMap.removeAnnotations(on_screen_markers);
                 on_screen_markers = new ArrayList<>();
+
             }
 
             for (int i=0; i<landmarks.size(); i++) {
@@ -250,21 +245,31 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         @Override
         protected List<PolygonOptions> doInBackground(List<Landmark>... params) {
-            List<Landmark> landmarks = params[0];
+            Log.d("Start", ".");
+            List<Landmark> ls = params[0];
             List<PolygonOptions> list = new ArrayList<>();
-            for (int i=0; i<landmarks.size(); i++) {
-                list.add(landmarks.get(i).drawWedge(mMapboxMap));
+            for (int i=0; i<ls.size(); i++) {
+                list.add(ls.get(i).drawWedge(mMapboxMap));
             }
             return list;
         }
 
         protected void onPostExecute(List<PolygonOptions> list) {
+            removeWedges();
             for (int i=0; i<list.size(); i++) {
                 Polygon wedge = mMapboxMap.addPolygon(list.get(i));
                 wedges.add(wedge);
                 wedge_markers.add(mMapboxMap.addMarker(
                         offscreen_landmarks.get(i).drawWedgeMarker(wedge)));
             }
+            Log.d("Stop", ".");
+        }
+    }
+
+    private void removeWedges() {
+        if (wedges_old != null && wedge_markers_old != null) {
+            mMapboxMap.removeAnnotations(wedges_old);
+            mMapboxMap.removeAnnotations(wedge_markers_old);
         }
     }
 
