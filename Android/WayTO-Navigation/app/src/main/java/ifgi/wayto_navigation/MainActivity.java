@@ -3,6 +3,7 @@ package ifgi.wayto_navigation;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
@@ -108,16 +109,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Waypoint destination = new Waypoint(7.62478, 51.96547);
 
     /**Münster Landmarks*/
-    protected Landmark dome = new Landmark("Dom", 7.625776, 51.962999);
-    protected Landmark train_station = new Landmark("Train Station", 7.634615, 51.956593);
-    protected Landmark buddenturm = new Landmark("Buddenturm", 7.623099, 51.966311);
-    protected Landmark kapuzinerkloster = new Landmark("Kapuzinerkloster", 7.606970, 51.970665);
-    protected Landmark institute = new Landmark("Insitut of geoinformatics", 7.595541, 51.969386);
-    protected Landmark castle = new Landmark("Castle", 7.613166, 51.963613);
-    protected Landmark ludgerikreisel = new Landmark("Ludgerikreisel", 7.626483, 51.955779);
+    protected Landmark dome = new Landmark("dome", 7.625776, 51.962999);
+    protected Landmark train_station = new Landmark("station", 7.634615, 51.956593);
+    protected Landmark buddenturm = new Landmark("buddenturm", 7.623099, 51.966311);
+    protected Landmark kapuzinerkloster = new Landmark("kapuzinerkloster", 7.606970, 51.970665);
+    protected Landmark castle = new Landmark("castle", 7.613166, 51.963613);
+    protected Landmark zoo = new Landmark("zoo", 7.586884, 51.948622);
     protected List<Landmark> landmarks = new ArrayList<Landmark>();
     protected List<Marker> on_screen_markers = new ArrayList<Marker>();
-    protected List<Icon> landmarks_icons = new ArrayList<>();
 
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
@@ -141,7 +140,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         landmarks.add(buddenturm);
         landmarks.add(kapuzinerkloster);
         landmarks.add(castle);
-        landmarks.add(ludgerikreisel);
+        landmarks.add(train_station);
+        landmarks.add(zoo);
 
         setIcons();
 
@@ -262,7 +262,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 wedge_markers.add(mMapboxMap.addMarker(
                         offscreen_landmarks.get(i).drawWedgeMarker(wedge)));
             }
-            Log.d("Stop", ".");
         }
     }
 
@@ -382,7 +381,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
     private int getIconID(String name){
-        name = "landmark"; //dummy
         try {
             return getResources().getIdentifier(name, "drawable", getApplicationContext().getPackageName());
         } catch (Exception e) {

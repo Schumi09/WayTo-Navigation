@@ -129,7 +129,7 @@ public class Landmark {
         double distanceToScreen = distanceToScreen(map, intersection); //in pixel
         double leg = calculateLeg(distanceToScreen);
         double distance_ratio = calculateDistanceRatio(map);
-        double distance = (leg * distance_ratio) + 40;
+        double distance = (leg * distance_ratio);
         //double map_orientation = map.getCameraPosition().bearing;
         double heading = heading(this.getLocationLatLng(), intersection_heading);// - map_orientation;
         double aperture = calculateAperture(distanceToScreen, leg);
@@ -187,7 +187,7 @@ public class Landmark {
      * @return
      */
     private double calculateLeg(double distanceToScreen) {
-        double INTRUSION_CONSTANT = 200;
+        double INTRUSION_CONSTANT = 20;
         double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
         return leg;
     }
@@ -197,7 +197,6 @@ public class Landmark {
     }
 
     private double distanceToScreen(MapboxMap map, LatLng intersection) {
-
         PointF landmark_sl = map.getProjection().toScreenLocation(this.locationLatLng);
         PointF intersection_sl = map.getProjection().toScreenLocation(intersection);
         return calculatePixelDistance(landmark_sl, intersection_sl);
@@ -211,13 +210,15 @@ public class Landmark {
         return dist;
     }
 
+
+    /**
     private double screenResolutionRatio(MapboxMap map, VisibleRegion bbox) {
         double origin_resolution = 208 * 320;
         double current_resolution = map.getProjection().toScreenLocation(bbox.farRight).x *
                 map.getProjection().toScreenLocation(bbox.nearLeft).y;
         double ratio = current_resolution / origin_resolution;
         return ratio;
-    }
+    }*/
 
     private double heading(LatLng coord1, LatLng coord2) {
         com.google.android.gms.maps.model.LatLng p1 = new com.google.android.gms.maps.model.LatLng
