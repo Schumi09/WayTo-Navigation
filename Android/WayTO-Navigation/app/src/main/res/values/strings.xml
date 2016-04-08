@@ -6,4 +6,7 @@
     <string name="action_settings_menu">Settings</string>
     <string name="action_destination">Destination</string>
     <string name="action_info">Info</string>
+    <string name="inline_visualization_type">Visualization Type</string>
+    <string name="title_visualization_type_preference">Select Visualization</string>
+    <string name="dialog_visualization_type_list_preference">Select Visualization</string>
 </resources>

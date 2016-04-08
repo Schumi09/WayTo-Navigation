@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="@string/inline_visualization_type">
+
+        <ListPreference
+            android:key="checkbox_visualization_type_preference"
+            android:title="@string/title_visualization_type_preference"
+            android:entries="@array/entries_visualization_type_preference"
+            android:entryValues="@array/entryvalues_visualization_type_preference"
+            android:dialogTitle="@string/dialog_visualization_type_list_preference"
+            android:defaultValue="0"/>
+
+    </PreferenceCategory>
+</PreferenceScreen>

@@ -2,6 +2,8 @@ package ifgi.wayto_navigation;
 
 import android.Manifest;
 import android.app.ActionBar;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
@@ -10,6 +12,9 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.Preference;
+import android.preference.PreferenceFragment;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -63,6 +68,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import ifgi.wayto_navigation.fragments.SettingsFragment;
 import ifgi.wayto_navigation.model.Landmark;
 import retrofit.Callback;
 import retrofit.Response;
@@ -103,8 +109,9 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
     protected final int BEARING_THRESHOLD = 30;
     protected String mLastUpdateTime;
     protected Boolean mRequestingLocationUpdates = true;
+    protected SharedPreferences.OnSharedPreferenceChangeListener sharedPrefListener;
 
-
+    public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
     protected List<Landmark> offscreen_landmarks = new ArrayList<>();
     protected List<Polygon> wedges = new ArrayList<>();
     protected List<Marker> wedge_markers = new ArrayList<>();
@@ -137,6 +144,8 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
     private GoogleApiClient client;
+    private SharedPreferences prefs;
+    private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -144,6 +153,8 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         final Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
         myToolbar.setLogo(R.drawable.logo_wayto);
@@ -180,7 +191,7 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
 
         mapView.getMapAsync(new OnMapReadyCallback() {
             @Override
-            public void onMapReady(@NonNull MapboxMap mapboxMap) {
+            public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
 
                 mapboxMap.getUiSettings().setCompassEnabled(false);
@@ -201,12 +212,23 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
                         toggleActionBar(actionBar);
                     }
                 });
+                onSharedPreferenceChangeListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+                    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+                                                          String key) {
+                        if (key.equals(VISUALIZATION_TYPE_KEY)) {
+                            mapboxMap.removeAnnotations();
+                            if (currentRoute != null) { drawRoute(currentRoute); }
+                        }
+                    }
+                };
+                prefs.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
             }
         });
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
+
 
     private void toggleActionBar(android.support.v7.app.ActionBar actionBar) {
         if (actionBar.isShowing()) {
@@ -243,6 +265,7 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
         if (currentJtsRouteLs != null) {
             mCurrentLocationSnap = snapLocation(mCurrentLocation);
@@ -265,16 +288,7 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
              .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));*/
 
             offscreen_landmarks = new ArrayList<>();
-
-            if (wedges.size() != 0 || on_screen_markers.size() != 0) {
-                wedges_old = wedges;
-                wedge_markers_old = wedge_markers;
-                wedges = new ArrayList<>();
-                wedge_markers = new ArrayList<>();
-                mMapboxMap.removeAnnotations(on_screen_markers);
-                on_screen_markers = new ArrayList<>();
-
-            }
+            clear_off_screen_data();
 
             for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
@@ -284,15 +298,46 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
                     offscreen_landmarks.add(l);
                 }
             }
-            new drawWedgesTask().execute(offscreen_landmarks);
+
+            String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
+            switch (visualisationType) {
+                case "0": //Wedges
+                    new drawWedgesTask().execute(offscreen_landmarks);
+                    break;
+                case "1": //Arrows
+                    break;
+
+                default:
+                    break;
+            }
+
         }
     }
+
+
+
+
+    private void clear_off_screen_data() {
+        //clear on screen markers
+        if (on_screen_markers.size() != 0) {
+            mMapboxMap.removeAnnotations(on_screen_markers);
+            on_screen_markers = new ArrayList<>();
+        }
+        //clear wedges
+        if (wedges.size() != 0) {
+            wedges_old = wedges;
+            wedge_markers_old = wedge_markers;
+            wedges = new ArrayList<>();
+            wedge_markers = new ArrayList<>();
+        }
+
+    }
+
 
     private class drawWedgesTask extends AsyncTask<List<Landmark>, Void, List<PolygonOptions>> {
 
         @Override
         protected List<PolygonOptions> doInBackground(List<Landmark>... params) {
-            Log.d("Start", ".");
             List<Landmark> ls = params[0];
             List<PolygonOptions> list = new ArrayList<>();
             for (int i = 0; i < ls.size(); i++) {
@@ -632,7 +677,8 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_settings:
-                // User chose the "Settings" item, show the app settings UI...
+                Intent intent = new Intent(this, SettingsActivity.class);
+                startActivity(intent);
                 return true;
 
             case R.id.action_destination:
