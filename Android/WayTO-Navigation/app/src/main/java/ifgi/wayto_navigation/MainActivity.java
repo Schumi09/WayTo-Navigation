@@ -1,21 +1,29 @@
 package ifgi.wayto_navigation;
 
 import android.Manifest;
+import android.app.ActionBar;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
@@ -39,9 +47,7 @@ import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
-import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -62,7 +68,7 @@ import retrofit.Callback;
 import retrofit.Response;
 import retrofit.Retrofit;
 
-public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
+public class MainActivity extends android.support.v7.app.ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
     /**
      * Map features.
@@ -104,11 +110,15 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected List<Marker> wedge_markers = new ArrayList<>();
     private List<Polygon> wedges_old;
     private List<Marker> wedge_markers_old;
-    /**Münster route waypoints*/
+    /**
+     * Münster route waypoints
+     */
     protected Waypoint origin = new Waypoint(7.61964, 51.95324);
     protected Waypoint destination = new Waypoint(7.62478, 51.96547);
 
-    /**Münster Landmarks*/
+    /**
+     * Münster Landmarks
+     */
     protected Landmark dome = new Landmark("dome", 7.625776, 51.962999);
     protected Landmark train_station = new Landmark("station", 7.634615, 51.956593);
     protected Landmark buddenturm = new Landmark("buddenturm", 7.623099, 51.966311);
@@ -121,6 +131,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
 
+    protected android.support.v7.app.ActionBar actionBar;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -128,6 +144,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
+
+        final Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
+        myToolbar.setLogo(R.drawable.logo_wayto);
+        setSupportActionBar(myToolbar);
+        actionBar = getSupportActionBar();
+
 
         Locale locale = new Locale("en_US");
         Locale.setDefault(locale);
@@ -153,11 +175,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mapView = (MapView) findViewById(R.id.mapview);
         mapView.setStyleUrl("mapbox://styles/schumi91/cimm7mq0i009dzpmckjmo8u4u");
         mapView.onCreate(savedInstanceState);
+        toggleFullscreen();
+        myToolbar.bringToFront();
 
         mapView.getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(@NonNull MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
+
                 mapboxMap.getUiSettings().setCompassEnabled(false);
                 mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
                 mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
@@ -170,26 +195,48 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 startLocationUpdates();
+                mMapboxMap.setOnMapLongClickListener(new MapboxMap.OnMapLongClickListener() {
+                    @Override
+                    public void onMapLongClick(@NonNull LatLng point) {
+                        toggleActionBar(actionBar);
+                    }
+                });
             }
         });
-
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
+
+    private void toggleActionBar(android.support.v7.app.ActionBar actionBar) {
+        if (actionBar.isShowing()) {
+            actionBar.hide();
+        } else {
+            actionBar.show();
+        }
+    }
+
+    private void toggleFullscreen() {
+        WindowManager.LayoutParams attrs = getWindow().getAttributes();
+        attrs.flags ^= WindowManager.LayoutParams.FLAG_FULLSCREEN;
+        getWindow().setAttributes(attrs);
+    }
+
 
     private void setIcons() {
         int i;
-        for (i=0; i<landmarks.size(); i++) {
+        for (i = 0; i < landmarks.size(); i++) {
             String name = landmarks.get(i).name;
             landmarks.get(i).setOff_screen_icon(getIcon(getIconID(name)));
         }
     }
-
-
 
     /**
      * onLocationChanged event.
      * Once the location has changed a marker displays the user's current position and updates the
      * mapview to the position as center.
      * todo: distinguish between snap and not snapped location in wedge call
+     *
      * @param location
      */
     @Override
@@ -210,16 +257,16 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
             /**
              * VisibleRegion area = mMapboxMap.getProjection().getVisibleRegion();
-            if (bbox !=null){
-                mMapboxMap.removePolygon(bbox);
-            }
-            bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
-            .add(area.farRight).add(area.nearRight).add(area.nearLeft)
+             if (bbox !=null){
+             mMapboxMap.removePolygon(bbox);
+             }
+             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
+             .add(area.farRight).add(area.nearRight).add(area.nearLeft)
              .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));*/
 
             offscreen_landmarks = new ArrayList<>();
 
-            if (wedges.size() != 0 || on_screen_markers.size() != 0 ) {
+            if (wedges.size() != 0 || on_screen_markers.size() != 0) {
                 wedges_old = wedges;
                 wedge_markers_old = wedge_markers;
                 wedges = new ArrayList<>();
@@ -229,7 +276,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
             }
 
-            for (int i=0; i<landmarks.size(); i++) {
+            for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
                 if (!l.isOffScreen(mMapboxMap)) {
                     on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker()));
@@ -248,7 +295,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             Log.d("Start", ".");
             List<Landmark> ls = params[0];
             List<PolygonOptions> list = new ArrayList<>();
-            for (int i=0; i<ls.size(); i++) {
+            for (int i = 0; i < ls.size(); i++) {
                 list.add(ls.get(i).drawWedge(mMapboxMap));
             }
             return list;
@@ -256,7 +303,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         protected void onPostExecute(List<PolygonOptions> list) {
             removeWedges();
-            for (int i=0; i<list.size(); i++) {
+            for (int i = 0; i < list.size(); i++) {
                 Polygon wedge = mMapboxMap.addPolygon(list.get(i));
                 wedges.add(wedge);
                 wedge_markers.add(mMapboxMap.addMarker(
@@ -335,6 +382,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      * Snapping location to the route line usings JTS Topology Suite
      * Considering nearest point on route to location
      * http://www.vividsolutions.com/jts/jtshome.htm
+     *
      * @param location
      * @return Snapped location
      */
@@ -353,6 +401,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**
      * Moving mapview to current position
      * Current position as center, bearing from location
+     *
      * @param location
      */
     private void moveCurrentPositionMarker(Location location) {
@@ -380,7 +429,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
 
-    private int getIconID(String name){
+    private int getIconID(String name) {
         try {
             return getResources().getIdentifier(name, "drawable", getApplicationContext().getPackageName());
         } catch (Exception e) {
@@ -457,14 +506,46 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected void onStart() {
         mGoogleApiClient.connect();
         super.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
         mapView.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
     }
 
     @Override
     protected void onStop() {
         mGoogleApiClient.disconnect();
         super.onStop();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
         mapView.onStop();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.disconnect();
     }
 
     @Override
@@ -537,6 +618,37 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
     private void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu items for use in the action bar
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.toolbar, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_settings:
+                // User chose the "Settings" item, show the app settings UI...
+                return true;
+
+            case R.id.action_destination:
+
+                return true;
+
+            case R.id.action_info:
+
+                return true;
+
+            default:
+                // If we got here, the user's action was not recognized.
+                // Invoke the superclass to handle it.
+                return super.onOptionsItemSelected(item);
+
+        }
     }
 
 }

@@ -3,4 +3,7 @@
     <string name="google_app_id">wayto-navigation</string>
     <string name="action_settings">Settings</string>
     <string name="accessToken">pk.eyJ1Ijoic2NodW1pOTEiLCJhIjoiY2lsZ294Mmc2MDA1ZHZrbTR3aHd2NnhqbSJ9.YPm4QaT1_13qooe7XLBovA</string>
+    <string name="action_settings_menu">Settings</string>
+    <string name="action_destination">Destination</string>
+    <string name="action_info">Info</string>
 </resources>
