@@ -53,6 +53,7 @@ import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -117,6 +118,10 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
     protected List<Marker> wedge_markers = new ArrayList<>();
     private List<Polygon> wedges_old;
     private List<Marker> wedge_markers_old;
+
+    private List<Marker> arrows = new ArrayList<>();
+    private List<Marker>arrows_old = new ArrayList<>();
+
     /**
      * Münster route waypoints
      */
@@ -146,6 +151,8 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
     private GoogleApiClient client;
     private SharedPreferences prefs;
     private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
+
+    private Polygon bbox;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -278,14 +285,13 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
 
         if (mMapboxMap != null) {
 
+
             /**
-             * VisibleRegion area = mMapboxMap.getProjection().getVisibleRegion();
-             if (bbox !=null){
-             mMapboxMap.removePolygon(bbox);
-             }
-             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
+            bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
              .add(area.farRight).add(area.nearRight).add(area.nearLeft)
-             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));*/
+             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
+            */
+
 
             offscreen_landmarks = new ArrayList<>();
             clear_off_screen_data();
@@ -304,7 +310,19 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
                 case "0": //Wedges
                     new drawWedgesTask().execute(offscreen_landmarks);
                     break;
-                case "1": //Arrows
+                case "1": //Arrows, only Icons so far
+                    List<MarkerOptions> list = new ArrayList<>();
+                    for (int i = 0; i < offscreen_landmarks.size(); i++) {
+                        Landmark lm = offscreen_landmarks.get(i);
+                        list.add(new MarkerOptions()
+                                .position(lm.onScreenAnchor(mMapboxMap, location))
+                                .icon(lm.getOff_screen_icon()));
+                    }
+
+                    if (arrows_old != null) {
+                        mMapboxMap.removeAnnotations(arrows_old);
+                    }
+                    arrows = mMapboxMap.addMarkers(list);
                     break;
 
                 default:
@@ -313,9 +331,6 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
 
         }
     }
-
-
-
 
     private void clear_off_screen_data() {
         //clear on screen markers
@@ -330,7 +345,11 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
             wedges = new ArrayList<>();
             wedge_markers = new ArrayList<>();
         }
-
+        //clear arrows
+        if (arrows.size() != 0) {
+            arrows_old = arrows;
+            arrows = new ArrayList<>();
+        }
     }
 
 
@@ -464,7 +483,7 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
         MarkerOptions options = new MarkerOptions()
                 .position(new LatLng(location.getLatitude(), location.getLongitude()))
                 .icon(getIcon(R.drawable.my_location));
-
+        //todo: use	setPosition(LatLng position)
         if (currentPositionMarker != null) {
             mMapboxMap.removeMarker(currentPositionMarker);
             currentPositionMarker = mMapboxMap.addMarker(options);
