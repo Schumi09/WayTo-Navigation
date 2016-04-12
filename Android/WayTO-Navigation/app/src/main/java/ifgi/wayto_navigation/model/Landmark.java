@@ -1,16 +1,21 @@
 package ifgi.wayto_navigation.model;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
 import android.location.Location;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
+import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.PolygonOptions;
+import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
+import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Projection;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -31,6 +36,9 @@ import java.util.List;
  * Created by Daniel Schumacher on 18.03.2016.
  */
 public class Landmark {
+
+    public Landmark() {
+    }
 
     public String name;
     public String description;
@@ -90,6 +98,26 @@ public class Landmark {
         return locationLatLng;
     }
 
+    /**
+     * Calculating a map position to represent the off-screen position
+     * @param map current mapboxmap object
+     * @return LatLng the position
+     */
+    public LatLng onScreenAnchor(MapboxMap map) {
+        Projection proj = map.getProjection();
+        LatLng userPosition = map.getCameraPosition().target;
+        Coordinate[] connection_coordinates = new Coordinate[2];
+        connection_coordinates[0] = latLngToSLCoordinate(userPosition, proj);
+        connection_coordinates[1] = latLngToSLCoordinate(this.locationLatLng, proj);
+        LineString connection = new GeometryFactory().createLineString(connection_coordinates);
+        Polygon onScreenAnchorPolygon = onScreenFrame(getBboxPolygonCoordinates(map));
+        Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon).getCoordinate();
+
+        LatLng value = proj.fromScreenLocation(new PointF(
+                (float)intersection.x, (float)intersection.y));
+        return value;
+    }
+
 
     public MarkerOptions drawMarker() {
             return new MarkerOptions()
@@ -132,8 +160,8 @@ public class Landmark {
         double heading = heading(this.getLocationLatLng(), intersection_heading);// - map_orientation;
         double aperture = calculateAperture(distanceToScreen, leg);
 
-        LatLng p1 = calculateWedgeEdge(heading, -(aperture / 2), distance);
-        LatLng p2 = calculateWedgeEdge(heading, (aperture / 2), distance);
+        LatLng p1 = calculateTargetLatLng(this.getLocationLatLng(), heading, -(aperture / 2), distance);
+        LatLng p2 = calculateTargetLatLng(this.getLocationLatLng(), heading, (aperture / 2), distance);
         LatLng mid_point = calculateMidPoint(p1, p2);
 
         PolygonOptions polygonOption = new PolygonOptions()
@@ -167,10 +195,10 @@ public class Landmark {
         return ratio;
     }
 
-    private LatLng calculateWedgeEdge(double heading, double angle, double dist) {
+    private LatLng calculateTargetLatLng(LatLng origin, double heading, double angle, double dist) {
         com.google.android.gms.maps.model.LatLng gLatLngLandmark = new
                 com.google.android.gms.maps.model.LatLng(
-                this.getLocationLatLng().getLatitude(), this.getLocation().getLongitude());
+                origin.getLatitude(), origin.getLongitude());
         com.google.android.gms.maps.model.LatLng googleEdge = SphericalUtil.computeOffset(
                 gLatLngLandmark, dist, heading + angle);
         return new LatLng(googleEdge.latitude, googleEdge.longitude);
@@ -235,21 +263,7 @@ public class Landmark {
         return null;
     }
 
-    public LatLng onScreenAnchor(MapboxMap map, Location current_user_position) {
-        Projection proj = map.getProjection();
-        LatLng userPosition = new LatLng(
-                current_user_position.getLatitude(), current_user_position.getLongitude());
-        Coordinate[] connection_coordinates = new Coordinate[2];
-        connection_coordinates[0] = latLngToSLCoordinate(userPosition, proj);
-        connection_coordinates[1] = latLngToSLCoordinate(this.locationLatLng, proj);
-        LineString connection = new GeometryFactory().createLineString(connection_coordinates);
-        Polygon onScreenAnchorPolygon = onScreenFrame(getBboxPolygonCoordinates(map));
-        Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon).getCoordinate();
 
-        LatLng value = proj.fromScreenLocation(new PointF(
-                (float)intersection.x, (float)intersection.y));
-        return value;
-    }
 
 
     /**
@@ -315,7 +329,7 @@ public class Landmark {
     }
 
     private Polygon onScreenFrame(Coordinate[] coordinates) {
-        double OFFSET = 30;
+        double OFFSET = 60;
         Coordinate[] new_coordinates = new Coordinate[5];
         new_coordinates[0] = coordinates[0];
         new_coordinates[0].x += OFFSET;
@@ -357,6 +371,63 @@ public class Landmark {
         return !bbox_polygon.contains(new GeometryFactory().createPoint(sl));
     }
 
+
+
+    public class TangiblePointer extends Landmark{
+        public List<Annotation> visualization;
+        private LatLng onScreenAnchor;
+        private Landmark landmark;
+
+        public TangiblePointer(MapboxMap map, Landmark l) {
+            this.visualization = new ArrayList<>();
+            this.landmark = l;
+            this.onScreenAnchor = this.landmark.onScreenAnchor(map);
+            setIcon(map);
+            setLine(map);
+        }
+
+        private void setIcon(MapboxMap map) {
+            LatLng position = this.landmark.onScreenAnchor(map);
+            MarkerOptions markerOptions = new MarkerOptions()
+                    .position(position).icon(this.landmark.getOff_screen_icon());
+            this.visualization.add(map.addMarker(markerOptions));
+        }
+
+        private void setLine(MapboxMap map) {
+            LatLng landmark = this.landmark.getLocationLatLng();
+            double heading = heading(this.onScreenAnchor, landmark);
+            double distance = this.onScreenAnchor.distanceTo(landmark);
+            LatLng p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, 50);
+            LatLng p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, 50);
+            PolylineOptions polylineOptions = new PolylineOptions()
+                    .add(p1).add(p2).color(Color.parseColor("#990000")).width(2);
+            Log.d("Polyline", p1.toString() + " " + p2.toString());
+            this.visualization.add(map.addPolyline(polylineOptions));
+            //setArrow(map, p1);
+        }
+
+        public void remove(MapboxMap map) {
+            map.removeAnnotations(this.visualization);
+        }
+
+        /**public void setArrow(MapboxMap map, LatLng position) {
+            Icon icon;
+            MarkerOptions markerOptions = new MarkerOptions()
+                    .position(position).icon(icon);
+            this.visualization.add(map.addMarker(markerOptions));
+        }*/
+
+    }
+
+    public TangiblePointer drawTangiblePointer(MapboxMap map) {
+        return new TangiblePointer(map, this);
+    }
+
+
+    /**
+     * String representation of Landmark
+     * @return
+     */
     public String toString(){
         return this.name + " at " + this.location.toString();
     }

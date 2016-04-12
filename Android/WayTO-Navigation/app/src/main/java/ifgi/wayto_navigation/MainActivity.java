@@ -75,7 +75,7 @@ import retrofit.Callback;
 import retrofit.Response;
 import retrofit.Retrofit;
 
-public class MainActivity extends android.support.v7.app.ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
+public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
     /**
      * Map features.
@@ -119,8 +119,8 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
     private List<Polygon> wedges_old;
     private List<Marker> wedge_markers_old;
 
-    private List<Marker> arrows = new ArrayList<>();
-    private List<Marker>arrows_old = new ArrayList<>();
+    private List<Landmark.TangiblePointer> arrows = new ArrayList<>();
+    private List<Landmark.TangiblePointer>arrows_old = new ArrayList<>();
 
     /**
      * Münster route waypoints
@@ -311,18 +311,22 @@ public class MainActivity extends android.support.v7.app.ActionBarActivity imple
                     new drawWedgesTask().execute(offscreen_landmarks);
                     break;
                 case "1": //Arrows, only Icons so far
-                    List<MarkerOptions> list = new ArrayList<>();
+                    List<Landmark.TangiblePointer> list = new ArrayList<>();
                     for (int i = 0; i < offscreen_landmarks.size(); i++) {
                         Landmark lm = offscreen_landmarks.get(i);
+                        list.add(lm.drawTangiblePointer(mMapboxMap));
+                        /**
                         list.add(new MarkerOptions()
-                                .position(lm.onScreenAnchor(mMapboxMap, location))
-                                .icon(lm.getOff_screen_icon()));
+                                .position(lm.onScreenAnchor(mMapboxMap))
+                                .icon(lm.getOff_screen_icon()));*/
                     }
 
                     if (arrows_old != null) {
-                        mMapboxMap.removeAnnotations(arrows_old);
+                        for (int i=0; i<arrows_old.size(); i++) {
+                            arrows_old.get(i).remove(mMapboxMap);
+                        }
                     }
-                    arrows = mMapboxMap.addMarkers(list);
+                    arrows = list;
                     break;
 
                 default:
