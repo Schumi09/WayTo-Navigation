@@ -314,7 +314,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                     List<Landmark.TangiblePointer> list = new ArrayList<>();
                     for (int i = 0; i < offscreen_landmarks.size(); i++) {
                         Landmark lm = offscreen_landmarks.get(i);
-                        list.add(lm.drawTangiblePointer(mMapboxMap));
+                        list.add(lm.drawTangiblePointer(mMapboxMap, getApplicationContext()));
                         /**
                         list.add(new MarkerOptions()
                                 .position(lm.onScreenAnchor(mMapboxMap))

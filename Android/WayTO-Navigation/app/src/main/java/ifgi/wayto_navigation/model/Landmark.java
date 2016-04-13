@@ -1,21 +1,24 @@
 package ifgi.wayto_navigation.model;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.PointF;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.support.annotation.NonNull;
-import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
+import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
-import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Projection;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -25,11 +28,12 @@ import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
-import com.vividsolutions.jts.geom.impl.PackedCoordinateSequence;
 import com.vividsolutions.jts.operation.distance.DistanceOp;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import ifgi.wayto_navigation.R;
 
 
 /**
@@ -124,8 +128,6 @@ public class Landmark {
                     .position(
                             new LatLng(this.location.getLatitude(), this.location.getLongitude()));
     }
-
-
 
 
     /**
@@ -329,7 +331,7 @@ public class Landmark {
     }
 
     private Polygon onScreenFrame(Coordinate[] coordinates) {
-        double OFFSET = 60;
+        double OFFSET = 100;
         Coordinate[] new_coordinates = new Coordinate[5];
         new_coordinates[0] = coordinates[0];
         new_coordinates[0].x += OFFSET;
@@ -372,13 +374,23 @@ public class Landmark {
     }
 
 
-
+    /**
+     * Visualizing off-screen landmark as tangible pointer
+     * Sven Bertel, Hans-Ulrich Lutter, Tom Kohlberg, and Dora Spensberger (2014).
+     * Tangible Pointers to Map Locations.
+     * In Christian Freksa, Bernhard Nebel, Mary Hegarty, & Thomas Barkowsky (Eds).
+     * Poster presentations of the Spatial Cognition 2014 conference.
+     * SFB/TR 8 Report No. 036-06/2014 (pp. 17–20). Bremen / Freiburg.
+     */
     public class TangiblePointer extends Landmark{
         public List<Annotation> visualization;
         private LatLng onScreenAnchor;
         private Landmark landmark;
+        private Context context;
+        private float alpha;
 
-        public TangiblePointer(MapboxMap map, Landmark l) {
+        public TangiblePointer(MapboxMap map, Landmark l, Context c) {
+            this.context = c;
             this.visualization = new ArrayList<>();
             this.landmark = l;
             this.onScreenAnchor = this.landmark.onScreenAnchor(map);
@@ -397,30 +409,42 @@ public class Landmark {
             LatLng landmark = this.landmark.getLocationLatLng();
             double heading = heading(this.onScreenAnchor, landmark);
             double distance = this.onScreenAnchor.distanceTo(landmark);
-            LatLng p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, 50);
-            LatLng p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, 50);
+            float width = (float) distance * 1/1000 + 2;
+            this.alpha = (float) ((distance * 1/50 + 30) * 2.5);
+            distance = Math.sqrt(distance) + 25;
+            LatLng p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
+            LatLng p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
             PolylineOptions polylineOptions = new PolylineOptions()
-                    .add(p1).add(p2).color(Color.parseColor("#990000")).width(2);
-            Log.d("Polyline", p1.toString() + " " + p2.toString());
+                    .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha / 255);
             this.visualization.add(map.addPolyline(polylineOptions));
-            //setArrow(map, p1);
+            setArrow(map, p1, heading - map.getCameraPosition().bearing);
         }
 
         public void remove(MapboxMap map) {
             map.removeAnnotations(this.visualization);
         }
 
-        /**public void setArrow(MapboxMap map, LatLng position) {
-            Icon icon;
+        public void setArrow(MapboxMap map, LatLng position, Double angle) {
+
+            Bitmap icon_bmp = BitmapFactory.decodeResource(
+                    this.context.getResources(), R.drawable.tangible_pointer_arrow);
+            Matrix matrix = new Matrix();
+            matrix.postRotate(angle.floatValue());
+            icon_bmp = Bitmap.createBitmap(icon_bmp, 0, 0, icon_bmp.getWidth(), icon_bmp.getHeight(), matrix, true);
+            IconFactory mIconFactory = IconFactory.getInstance(this.context);
+            Drawable mIconDrawable = new BitmapDrawable(this.context.getResources(), icon_bmp);
+            mIconDrawable.setAlpha(Math.round(this.alpha));
+            Icon icon = mIconFactory.fromDrawable(mIconDrawable);
+
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(position).icon(icon);
             this.visualization.add(map.addMarker(markerOptions));
-        }*/
+        }
 
     }
 
-    public TangiblePointer drawTangiblePointer(MapboxMap map) {
-        return new TangiblePointer(map, this);
+    public TangiblePointer drawTangiblePointer(MapboxMap map, Context context) {
+        return new TangiblePointer(map, this, context);
     }
 
 
