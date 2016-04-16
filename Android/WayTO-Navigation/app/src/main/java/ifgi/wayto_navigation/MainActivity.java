@@ -1,7 +1,6 @@
 package ifgi.wayto_navigation;
 
 import android.Manifest;
-import android.app.ActionBar;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -10,10 +9,7 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -41,19 +37,16 @@ import com.mapbox.directions.MapboxDirections;
 import com.mapbox.directions.service.models.DirectionsResponse;
 import com.mapbox.directions.service.models.DirectionsRoute;
 import com.mapbox.directions.service.models.Waypoint;
-import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polygon;
-import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -69,7 +62,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import ifgi.wayto_navigation.fragments.SettingsFragment;
 import ifgi.wayto_navigation.model.Landmark;
 import retrofit.Callback;
 import retrofit.Response;
@@ -114,13 +106,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
     protected List<Landmark> offscreen_landmarks = new ArrayList<>();
-    protected List<Polygon> wedges = new ArrayList<>();
-    protected List<Marker> wedge_markers = new ArrayList<>();
-    private List<Polygon> wedges_old;
-    private List<Marker> wedge_markers_old;
-
-    private List<Landmark.TangiblePointer> arrows = new ArrayList<>();
-    private List<Landmark.TangiblePointer>arrows_old = new ArrayList<>();
 
     /**
      * Münster route waypoints
@@ -138,7 +123,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected Landmark castle = new Landmark("castle", 7.613166, 51.963613);
     protected Landmark zoo = new Landmark("zoo", 7.586884, 51.948622);
     protected List<Landmark> landmarks = new ArrayList<Landmark>();
-    protected List<Marker> on_screen_markers = new ArrayList<Marker>();
 
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
@@ -152,7 +136,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     private SharedPreferences prefs;
     private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
 
-    private Polygon bbox;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -255,7 +238,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     private void setIcons() {
         int i;
         for (i = 0; i < landmarks.size(); i++) {
-            String name = landmarks.get(i).name;
+            String name = landmarks.get(i).getName();
             landmarks.get(i).setOff_screen_icon(getIcon(getIconID(name)));
         }
     }
@@ -286,6 +269,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         if (mMapboxMap != null) {
 
 
+            MapboxMap map_temp = mMapboxMap;
             /**
             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
              .add(area.farRight).add(area.nearRight).add(area.nearLeft)
@@ -294,96 +278,35 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
 
             offscreen_landmarks = new ArrayList<>();
-            clear_off_screen_data();
+
 
             for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
-                if (!l.isOffScreen(mMapboxMap)) {
-                    on_screen_markers.add(mMapboxMap.addMarker(l.drawMarker()));
+                l.removeVisualization(map_temp);
+                if (!l.isOffScreen(map_temp)) {
+                    l.drawOnScreenMarker(map_temp);
                 } else {
                     offscreen_landmarks.add(l);
                 }
             }
 
             String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
-            switch (visualisationType) {
-                case "0": //Wedges
-                    new drawWedgesTask().execute(offscreen_landmarks);
-                    break;
-                case "1": //Arrows, only Icons so far
-                    List<Landmark.TangiblePointer> list = new ArrayList<>();
-                    for (int i = 0; i < offscreen_landmarks.size(); i++) {
-                        Landmark lm = offscreen_landmarks.get(i);
-                        list.add(lm.drawTangiblePointer(mMapboxMap, getApplicationContext()));
-                        /**
-                        list.add(new MarkerOptions()
-                                .position(lm.onScreenAnchor(mMapboxMap))
-                                .icon(lm.getOff_screen_icon()));*/
-                    }
+            for (int i = 0; i < offscreen_landmarks.size(); i++) {
+                Landmark lm = offscreen_landmarks.get(i);
+                switch (visualisationType) {
+                    case "0": //Wedges
+                        lm.drawWedge(map_temp, getApplicationContext());
 
-                    if (arrows_old != null) {
-                        for (int i=0; i<arrows_old.size(); i++) {
-                            arrows_old.get(i).remove(mMapboxMap);
-                        }
-                    }
-                    arrows = list;
-                    break;
+                        break;
+                    case "1": //Arrows, only Icons so far
+                        lm.drawTangiblePointer(map_temp, getApplicationContext());
+                        break;
 
-                default:
-                    break;
+                    default:
+                        break;
+                }
             }
-
-        }
-    }
-
-    private void clear_off_screen_data() {
-        //clear on screen markers
-        if (on_screen_markers.size() != 0) {
-            mMapboxMap.removeAnnotations(on_screen_markers);
-            on_screen_markers = new ArrayList<>();
-        }
-        //clear wedges
-        if (wedges.size() != 0) {
-            wedges_old = wedges;
-            wedge_markers_old = wedge_markers;
-            wedges = new ArrayList<>();
-            wedge_markers = new ArrayList<>();
-        }
-        //clear arrows
-        if (arrows.size() != 0) {
-            arrows_old = arrows;
-            arrows = new ArrayList<>();
-        }
-    }
-
-
-    private class drawWedgesTask extends AsyncTask<List<Landmark>, Void, List<PolygonOptions>> {
-
-        @Override
-        protected List<PolygonOptions> doInBackground(List<Landmark>... params) {
-            List<Landmark> ls = params[0];
-            List<PolygonOptions> list = new ArrayList<>();
-            for (int i = 0; i < ls.size(); i++) {
-                list.add(ls.get(i).drawWedge(mMapboxMap));
-            }
-            return list;
-        }
-
-        protected void onPostExecute(List<PolygonOptions> list) {
-            removeWedges();
-            for (int i = 0; i < list.size(); i++) {
-                Polygon wedge = mMapboxMap.addPolygon(list.get(i));
-                wedges.add(wedge);
-                wedge_markers.add(mMapboxMap.addMarker(
-                        offscreen_landmarks.get(i).drawWedgeMarker(wedge)));
-            }
-        }
-    }
-
-    private void removeWedges() {
-        if (wedges_old != null && wedge_markers_old != null) {
-            mMapboxMap.removeAnnotations(wedges_old);
-            mMapboxMap.removeAnnotations(wedge_markers_old);
+            mMapboxMap = map_temp;
         }
     }
 
