@@ -9,6 +9,7 @@ import android.graphics.PointF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.os.AsyncTask;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Annotation;
@@ -300,26 +301,61 @@ public class Landmark {
             LatLng p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
             PolylineOptions polylineOptions = new PolylineOptions()
                     .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha / 255);
-
+            ArrowParams params = new ArrowParams(map, p1, heading - map.getCameraPosition().bearing, this);
             this.visualization.add(map.addPolyline(polylineOptions));
-            setArrow(map, p1, heading - map.getCameraPosition().bearing);
+            new SetArrow().execute(params);
+            //setArrow(map, p1, heading - map.getCameraPosition().bearing);
+        }
+
+        private class ArrowParams {
+            public ArrowParams(MapboxMap map, LatLng l, Double d, TangiblePointer tangiblePointer) {
+                this.map = map;
+                this.l = l;
+                this.angle = d;
+                this.tangiblePointer = tangiblePointer;
+            }
+
+            public MapboxMap map;
+            public LatLng l;
+            public Double angle;
+            public TangiblePointer tangiblePointer;
+        }
+
+        private class SetArrow extends AsyncTask<ArrowParams, Void, MarkerOptions> {
+            MapboxMap map;
+            TangiblePointer tangiblePointer;
+
+            @Override
+            protected MarkerOptions doInBackground(ArrowParams... params) {
+                this.map = params[0].map;
+                this.tangiblePointer = params[0].tangiblePointer;
+                LatLng l = params[0].l;
+                double angle = params[0].angle;
+                return setArrow(l, angle);
+            }
+
+            protected void onPostExecute(MarkerOptions options) {
+                this.tangiblePointer.visualization.add(map.addMarker(options));
+            }
         }
 
 
-        private void setArrow(MapboxMap map, LatLng position, Double angle) {
+        private MarkerOptions setArrow(LatLng position, Double angle) {
 
             Bitmap icon_bmp = BitmapFactory.decodeResource(
-                    this.context.getResources(), R.drawable.tangible_pointer_arrow);
+                    this.context.getResources(), R.drawable.arrow);
             Matrix matrix = new Matrix();
             matrix.postRotate(angle.floatValue());
             icon_bmp = Bitmap.createBitmap(icon_bmp, 0, 0, icon_bmp.getWidth(), icon_bmp.getHeight(), matrix, true);
             IconFactory mIconFactory = IconFactory.getInstance(this.context);
             Drawable mIconDrawable = new BitmapDrawable(this.context.getResources(), icon_bmp);
             mIconDrawable.setAlpha(Math.round(this.alpha));
+
             Icon icon = mIconFactory.fromDrawable(mIconDrawable);
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(position).icon(icon);
-            this.visualization.add(map.addMarker(markerOptions));
+            //this.visualization.add(map.addMarker(markerOptions));
+            return markerOptions;
         }
 
     }

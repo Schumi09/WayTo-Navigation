@@ -41,7 +41,6 @@ import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
-import com.mapbox.mapboxsdk.annotations.Polygon;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
@@ -98,6 +97,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected LocationRequest mLocationRequest;
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
+    protected Location mPrevLocationSnap;
     protected double mCurrentBearing = 361;
     protected final int BEARING_THRESHOLD = 30;
     protected String mLastUpdateTime;
@@ -212,6 +212,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                     }
                 };
                 prefs.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
+                mapView.setKeepScreenOn(true);
             }
         });
         // ATTENTION: This was auto-generated to implement the App Indexing API.
@@ -253,9 +254,11 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      */
     @Override
     public void onLocationChanged(Location location) {
+        Log.i("Location changed", location.toString());
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+
 
         if (currentJtsRouteLs != null) {
             mCurrentLocationSnap = snapLocation(mCurrentLocation);
