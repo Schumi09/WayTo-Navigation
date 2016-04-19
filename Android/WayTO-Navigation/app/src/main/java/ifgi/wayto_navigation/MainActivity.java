@@ -32,11 +32,6 @@ import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListe
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.mapbox.directions.DirectionsCriteria;
-import com.mapbox.directions.MapboxDirections;
-import com.mapbox.directions.service.models.DirectionsResponse;
-import com.mapbox.directions.service.models.DirectionsRoute;
-import com.mapbox.directions.service.models.Waypoint;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
@@ -49,6 +44,13 @@ import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.services.Constants;
+import com.mapbox.services.commons.ServicesException;
+import com.mapbox.services.commons.models.Position;
+import com.mapbox.services.directions.v5.DirectionsCriteria;
+import com.mapbox.services.directions.v5.MapboxDirections;
+import com.mapbox.services.directions.v5.models.DirectionsResponse;
+import com.mapbox.services.directions.v5.models.DirectionsRoute;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -62,9 +64,10 @@ import java.util.List;
 import java.util.Locale;
 
 import ifgi.wayto_navigation.model.Landmark;
-import retrofit.Callback;
-import retrofit.Response;
-import retrofit.Retrofit;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
@@ -97,7 +100,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected LocationRequest mLocationRequest;
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
-    protected Location mPrevLocationSnap;
     protected double mCurrentBearing = 361;
     protected final int BEARING_THRESHOLD = 30;
     protected String mLastUpdateTime;
@@ -110,8 +112,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**
      * Münster route waypoints
      */
-    protected Waypoint origin = new Waypoint(7.61964, 51.95324);
-    protected Waypoint destination = new Waypoint(7.62478, 51.96547);
+    protected Position origin = Position.fromCoordinates(7.61964, 51.95324);
+    protected Position destination = Position.fromCoordinates(7.62478, 51.96547);
+
 
     /**
      * Münster Landmarks
@@ -188,7 +191,11 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
                 mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
                 mapboxMap.getUiSettings().setAttributionEnabled(false);
-                getRoute(origin, destination);
+                try {
+                    getRoute();
+                } catch (ServicesException e) {
+                    e.printStackTrace();
+                }
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(51.96937, 7.60937))
                         .zoom(12)
@@ -313,41 +320,38 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         }
     }
 
-    private void routeToJtsLineString(DirectionsRoute route) {
-
-        int currentRouteSize = route.getGeometry().getCoordinates().size();
-        Coordinate[] coordinates = new Coordinate[currentRouteSize];
-
-        for (int i = 0; i < currentRouteSize; i++) {
-            List node = route.getGeometry().getCoordinates().get(i);
-            coordinates[i] = new Coordinate((double) node.get(1), (double) node.get(0));
-        }
-
-        currentJtsRouteLs = new GeometryFactory().createLineString(coordinates);
-    }
-
-    private void getRoute(Waypoint origin, Waypoint destination) {
+    private void getRoute() throws ServicesException {
+        ArrayList<Position> positions = new ArrayList<>();
+        positions.add(origin);
+        positions.add(destination);
         MapboxDirections md = new MapboxDirections.Builder()
-                .setAccessToken(MAPBOX_ACCESS_TOKEN)
-                .setOrigin(origin)
-                .setDestination(destination)
+                .setAccessToken("pk.eyJ1Ijoic2NodW1pOTEiLCJhIjoiY2lsZ294Mmc2MDA1ZHZrbTR3aHd2NnhqbSJ9.YPm4QaT1_13qooe7XLBovA")
+                .setCoordinates(positions)
                 .setProfile(DirectionsCriteria.PROFILE_DRIVING)
+                .setUser("mapbox")
                 .build();
 
+        Log.d("md", md.getClass().toString());
 
-        md.enqueue(new Callback<DirectionsResponse>() {
+        md.enqueueCall(new Callback<DirectionsResponse>() {
             @Override
-            public void onResponse(Response<DirectionsResponse> response, Retrofit retrofit) {
+            public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
+                // You can get the generic HTTP info about the response
+                Log.d(TAG, "Response code: " + response.code());
+                if (response.body() == null) {
+                    Log.e("Call", call.request().url().toString());
+                    Log.e(TAG, "No routes found, make sure you set the right user and access token.");
+                    return;
+                }
+
+                // Print some info about the route
                 currentRoute = response.body().getRoutes().get(0);
-                routeToJtsLineString(currentRoute);
-                // Draw the route on the map
-                drawRoute(currentRoute);
+                Log.d(TAG, "Distance: " + currentRoute.getDistance());
             }
 
             @Override
-            public void onFailure(Throwable t) {
-                Log.e("Error", "Error: " + t.getMessage());
-                showMessage("Error: " + t.getMessage());
+            public void onFailure(Call<DirectionsResponse> call, Throwable t) {
+                Log.e(TAG, "Error: " + t.getMessage());
             }
         });
     }
@@ -357,17 +361,23 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         if (currentRoutePolyline != null) {
             mMapboxMap.removeAnnotation(currentRoutePolyline);
         }
-        // Convert List<Waypoint> into LatLng[]
-        List<Waypoint> waypoints = route.getGeometry().getWaypoints();
-        LatLng[] point = new LatLng[waypoints.size()];
-        for (int i = 0; i < waypoints.size(); i++) {
-            point[i] = new LatLng(
-                    waypoints.get(i).getLatitude(),
-                    waypoints.get(i).getLongitude());
+        com.mapbox.services.commons.geojson.LineString lineString = com.mapbox.services
+                .commons.geojson.LineString
+                .fromPolyline(route.getGeometry(), Constants.OSRM_PRECISION_V5);
+        List<Position> coordinates = lineString.getCoordinates();
+        LatLng[] points = new LatLng[coordinates.size()];
+        Coordinate[] coords = new Coordinate[coordinates.size()];
+        for (int i = 0; i < coordinates.size(); i++) {
+            points[i] = new LatLng(
+                    coordinates.get(i).getLatitude(),
+                    coordinates.get(i).getLongitude());
+            coords[i] = new Coordinate(coordinates.get(i).getLatitude(),
+                    coordinates.get(i).getLongitude());
         }
 
+        currentJtsRouteLs = new GeometryFactory().createLineString(coords);
         PolylineOptions routeOptions = new PolylineOptions()
-                .add(point)
+                .add(points)
                 .color(Color.parseColor("#3887be"));
         currentRoutePolyline = mMapboxMap.addPolyline(routeOptions);
     }
