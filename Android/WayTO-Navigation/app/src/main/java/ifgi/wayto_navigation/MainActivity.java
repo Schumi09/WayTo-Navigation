@@ -47,11 +47,11 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.services.Constants;
 import com.mapbox.services.commons.ServicesException;
 import com.mapbox.services.commons.models.Position;
+import com.mapbox.services.directions.v4.models.Waypoint;
 import com.mapbox.services.directions.v4.DirectionsCriteria;
 import com.mapbox.services.directions.v4.MapboxDirections;
 import com.mapbox.services.directions.v4.models.DirectionsResponse;
 import com.mapbox.services.directions.v4.models.DirectionsRoute;
-import com.mapbox.services.directions.v4.models.Waypoint;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -185,7 +185,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             @Override
             public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
-
+                startLocationUpdates();
                 mapboxMap.getUiSettings().setCompassEnabled(false);
                 mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
                 mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
@@ -201,7 +201,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                         .build();
 
                 mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-                startLocationUpdates();
+
                 mMapboxMap.setOnMapLongClickListener(new MapboxMap.OnMapLongClickListener() {
                     @Override
                     public void onMapLongClick(@NonNull LatLng point) {
@@ -260,7 +260,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      */
     @Override
     public void onLocationChanged(Location location) {
-        Log.i("Location changed", location.toString());
+
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
@@ -336,16 +336,18 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
                 // You can get the generic HTTP info about the response
                 Log.d(TAG, "Response code: " + response.code());
+                Log.d("Call", call.request().url().toString());
+
                 if (response.body() == null) {
-                    Log.e("Call", call.request().url().toString());
                     Log.e(TAG, "No routes found, make sure you set the right user and access token.");
                     return;
-                }
+                }else {
 
-                // Print some info about the route
-                currentRoute = response.body().getRoutes().get(0);
-                drawRoute(currentRoute);
-                Log.d(TAG, "Distance: " + currentRoute.getDistance());
+                    // Print some info about the route
+                    currentRoute = response.body().getRoutes().get(0);
+                    drawRoute(currentRoute);
+                    Log.d(TAG, "Distance: " + currentRoute.getDistance());
+                }
             }
 
             @Override
@@ -368,7 +370,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             points[i] = new LatLng(
                     coordinates.get(i).getLatitude(),
                     coordinates.get(i).getLongitude());
-            Log.d("l", points[i].toString());
             coords[i] = new Coordinate(points[i].getLatitude(),
                     points[i].getLongitude());
         }
@@ -511,7 +512,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client.connect();
-        mapView.onStart();
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         Action viewAction = Action.newAction(
@@ -544,7 +544,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
         );
         AppIndex.AppIndexApi.end(client, viewAction);
-        mapView.onStop();
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client.disconnect();
@@ -566,6 +565,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mapView.onResume();
         if (mGoogleApiClient.isConnected() && mRequestingLocationUpdates) {
             startLocationUpdates();
+        }
+        if (mMapboxMap != null) {
+            mMapboxMap.removeAnnotations();
+
+        }
+        if (currentRoute != null) {
+            drawRoute(currentRoute);
         }
     }
 
