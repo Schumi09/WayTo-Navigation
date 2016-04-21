@@ -355,6 +355,12 @@ public class Landmark {
             Icon icon = mIconFactory.fromDrawable(mIconDrawable);
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(position).icon(icon);
+
+            if (icon_bmp != null) {
+                icon_bmp.recycle();
+                icon_bmp = null;
+            }
+
             //this.visualization.add(map.addMarker(markerOptions));
             return markerOptions;
         }
