@@ -91,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
-    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 5000;
+    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 3000;
 
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
@@ -104,6 +104,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected GoogleApiClient mGoogleApiClient;
 
     protected LocationRequest mLocationRequest;
+    protected Icon mCurrentPositionIcon;
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
     protected double mCurrentBearing = 361;
@@ -151,6 +152,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         globals = Globals.getInstance();
+        mCurrentPositionIcon = getIcon(R.drawable.my_location);
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -268,6 +270,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     @Override
     public void onLocationChanged(Location location) {
 
+        Log.i("location", location.toString());
+
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
@@ -298,9 +302,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
             for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
-                l.removeVisualization(map_temp);
-                if (!l.isOffScreen(map_temp)) {
-                    l.drawOnScreenMarker(map_temp);
+                l.removeVisualization(mMapboxMap);
+                if (!l.isOffScreen(mMapboxMap)) {
+                    l.drawOnScreenMarker(mMapboxMap);
                 } else {
                     offscreen_landmarks.add(l);
                 }
@@ -312,26 +316,25 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 Landmark lm = offscreen_landmarks.get(i);
                 switch (visualisationType) {
                     case "0": //Wedges
-                        lm.drawWedge(map_temp, getApplicationContext());
+                        lm.drawWedge(mMapboxMap, getApplicationContext());
 
                         break;
                     case "1": //Tangible Pointer
                         if (tp_help) {
                             globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                                    Landmark.getBboxPolygonCoordinates(map_temp)));
+                                    Landmark.getBboxPolygonCoordinates(mMapboxMap)));
                             List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
                                     globals.getOnScreenFrameCoords());
                             globals.setOnScreenAnchors(onScreenAnchors);
                             tp_help = false;
                         }
-                        lm.drawTangiblePointer(map_temp, getApplicationContext());
+                        lm.drawTangiblePointer(mMapboxMap, getApplicationContext());
                         break;
 
                     default:
                         break;
                 }
             }
-            mMapboxMap = map_temp;
         }
     }
 
@@ -344,8 +347,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 .setWaypoints(positions)
                 .setProfile(DirectionsCriteria.PROFILE_DRIVING)
                 .build();
-
-        Log.d("md", md.getClass().toString());
 
         md.enqueueCall(new Callback<DirectionsResponse>() {
             @Override
@@ -437,7 +438,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         MarkerOptions options = new MarkerOptions()
                 .position(new LatLng(location.getLatitude(), location.getLongitude()))
-                .icon(getIcon(R.drawable.my_location));
+                .icon(mCurrentPositionIcon);
         //todo: use	setPosition(LatLng position)
         if (currentPositionMarker != null) {
             mMapboxMap.removeMarker(currentPositionMarker);
