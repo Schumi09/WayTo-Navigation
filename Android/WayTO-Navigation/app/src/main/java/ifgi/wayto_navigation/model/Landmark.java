@@ -10,6 +10,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Annotation;
@@ -284,7 +285,7 @@ public class Landmark {
         }
 
         private void setIcon(MapboxMap map) {
-            LatLng position = this.landmark.onScreenAnchor(map);
+            LatLng position = this.onScreenAnchor;
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(position).icon(this.landmark.getOff_screen_icon());
             this.visualization.add(map.addMarker(markerOptions));
@@ -370,17 +371,26 @@ public class Landmark {
      * @return LatLng the position
      */
     public LatLng onScreenAnchor(MapboxMap map) {
+        Globals globals = Globals.getInstance();
         Projection proj = map.getProjection();
         LatLng userPosition = map.getCameraPosition().target;
         Coordinate[] connection_coordinates = new Coordinate[2];
         connection_coordinates[0] = latLngToSLCoordinate(userPosition, proj);
         connection_coordinates[1] = latLngToSLCoordinate(this.locationLatLng, proj);
         LineString connection = new GeometryFactory().createLineString(connection_coordinates);
-        Polygon onScreenAnchorPolygon = onScreenFrame(getBboxPolygonCoordinates(map));
-        Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon).getCoordinate();
+        Coordinate[] onScreenFrameCoords = globals.getOnScreenFrameCoords();
+        Polygon onScreenAnchorPolygon = new GeometryFactory().createPolygon(onScreenFrameCoords);
+        //Log.d("Anchors", onScreenAnchors(onScreenFrameCoords).toString());
+        Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon)
+                .getCoordinate();
+        int anchor_position = getOnScreenAnchorPosition(intersection);
+        List<OnScreenAnchor> onScreenAnchors = globals.getOnScreenAnchors();
+        Coordinate anchor = onScreenAnchors.get(anchor_position).getCoordinate();
+        onScreenAnchors.get(anchor_position).setIsFree(false);
+        globals.setOnScreenAnchors(onScreenAnchors);
 
         LatLng value = proj.fromScreenLocation(new PointF(
-                (float)intersection.x, (float)intersection.y));
+                (float)anchor.x, (float)anchor.y));
         return value;
     }
 
@@ -476,7 +486,7 @@ public class Landmark {
         return new GeometryFactory().createPolygon(getBboxPolygonCoordinates(map));
     }
 
-    private Coordinate[] getBboxPolygonCoordinates(MapboxMap map) {
+    public static Coordinate[] getBboxPolygonCoordinates(MapboxMap map) {
         Projection proj = map.getProjection();
         VisibleRegion bbox = proj.getVisibleRegion();
 
@@ -489,7 +499,7 @@ public class Landmark {
         return coordinates;
     }
 
-    private Polygon onScreenFrame(Coordinate[] coordinates) {
+    public static Coordinate[] onScreenFrame(Coordinate[] coordinates) {
         double OFFSET = 100;
         Coordinate[] new_coordinates = new Coordinate[5];
         new_coordinates[0] = coordinates[0];
@@ -505,7 +515,102 @@ public class Landmark {
         new_coordinates[3].x += OFFSET;
         new_coordinates[3].y -= OFFSET;
         new_coordinates[4] = new_coordinates[0];
-        return new GeometryFactory().createPolygon(new_coordinates);
+        return new_coordinates;
+    }
+
+    public static class OnScreenAnchor {
+        private Coordinate coordinate;
+        private boolean isFree;
+
+        public OnScreenAnchor(Coordinate coordinate) {
+            this.coordinate = coordinate;
+            this.isFree = true;
+        }
+
+        public void setIsFree(boolean state) {
+            this.isFree = state;
+        }
+
+        public Coordinate getCoordinate() {
+            return coordinate;
+        }
+
+        public boolean isFree() {
+            return isFree;
+        }
+
+        @Override
+        public String toString() {
+            return "onScreenAnchor{" +
+                    //"isFree=" + isFree +
+                    ", coordinate=" + coordinate +
+                    '}';
+        }
+    }
+
+    public static List<OnScreenAnchor> onScreenAnchors(Coordinate[] coordinates) {
+        List<OnScreenAnchor> anchors = new ArrayList<>();
+
+        double long_dist = coordinates[1].x - coordinates[0].x;
+        double space = 35;
+        int long_number = (int) Math.ceil(long_dist / space);
+        double short_dist = coordinates[2].y - coordinates[1].y;
+        int short_number = (int) Math.ceil(short_dist / space);
+
+        //long top:
+        double long_x = coordinates[0].x;
+        anchors.add(new OnScreenAnchor(coordinates[0]));
+        for (int i=1; i<long_number; i++) {
+            long_x += space;
+            anchors.add(new OnScreenAnchor(new Coordinate(long_x, coordinates[1].y)));
+        }
+        //short right:
+        double short_y = coordinates[1].y;
+        //anchors.add(new onScreenAnchor(anchors.get(anchors.size() - 1).getCoordinate()));
+        for (int i=1; i<short_number; i++) {
+            short_y += space;
+            anchors.add(new OnScreenAnchor(new Coordinate(long_x , short_y)));
+        }
+
+        //long bottom:
+        //anchors.add(new onScreenAnchor(new Coordinate(long_x, short_y));
+        for (int i=1; i<long_number; i++) {
+            long_x -= space;
+            anchors.add(new OnScreenAnchor(new Coordinate(long_x, short_y)));
+        }
+
+        //short left:
+        //anchors.add(new onScreenAnchor(new Coordinate(long_x, short_y)));
+        for (int i=1; i<short_number-1; i++) {
+            short_y -= space;
+            anchors.add(new OnScreenAnchor(new Coordinate(long_x, short_y)));
+        }
+
+        return anchors;
+    }
+
+    private static int getOnScreenAnchorPosition(Coordinate intersection) {
+        Globals globals = Globals.getInstance();
+        List<OnScreenAnchor> points = globals.getOnScreenAnchors();
+        int position = 0;
+        double distance = intersection.distance(points.get(0).getCoordinate());
+        for (int i = 1; i < points.size(); i++) {
+            double d = intersection.distance(points.get(i).getCoordinate());
+            if (d < distance) {
+                distance = d;
+                position = i;
+            }
+        }
+
+        if (points.get(position).isFree()) {
+            return position;
+        } else {
+            position++;
+            while (!points.get(position).isFree()) {
+                position++;
+            }
+            return position;
+        }
     }
 
     private Coordinate[] bboxCoordsSL(MapboxMap map) {
@@ -521,7 +626,7 @@ public class Landmark {
         return coordinates;
     }
 
-    private Coordinate latLngToSLCoordinate (LatLng latLng, Projection projection) {
+    private static Coordinate latLngToSLCoordinate(LatLng latLng, Projection projection) {
         PointF p = projection.toScreenLocation(latLng);
         return new Coordinate(p.x, p.y);
     }

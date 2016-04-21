@@ -64,12 +64,18 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import ifgi.wayto_navigation.model.Globals;
 import ifgi.wayto_navigation.model.Landmark;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
+
+    /**
+     * Global variables
+     */
+    protected Globals globals;
 
     /**
      * Map features.
@@ -144,6 +150,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        globals = Globals.getInstance();
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -300,6 +307,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             }
 
             String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
+            boolean tp_help = true;
             for (int i = 0; i < offscreen_landmarks.size(); i++) {
                 Landmark lm = offscreen_landmarks.get(i);
                 switch (visualisationType) {
@@ -307,7 +315,15 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                         lm.drawWedge(map_temp, getApplicationContext());
 
                         break;
-                    case "1": //Arrows, only Icons so far
+                    case "1": //Tangible Pointer
+                        if (tp_help) {
+                            globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
+                                    Landmark.getBboxPolygonCoordinates(map_temp)));
+                            List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
+                                    globals.getOnScreenFrameCoords());
+                            globals.setOnScreenAnchors(onScreenAnchors);
+                            tp_help = false;
+                        }
                         lm.drawTangiblePointer(map_temp, getApplicationContext());
                         break;
 
