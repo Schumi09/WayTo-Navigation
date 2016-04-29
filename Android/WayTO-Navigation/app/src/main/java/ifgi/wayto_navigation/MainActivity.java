@@ -190,10 +190,70 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         toggleFullscreen();
         myToolbar.bringToFront();
 
+
         mapView.getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
+                mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
+
+                    @Override
+                    public void onCameraChange(CameraPosition position) {
+                        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+                        if (mCurrentBearing == 361) {
+                            mCurrentBearing = mCurrentLocation.getBearing();
+                        }
+
+                        if (mMapboxMap != null && mapboxMap != null) {
+                            MapboxMap map_temp = mMapboxMap;
+                            /**
+                             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
+                             .add(area.farRight).add(area.nearRight).add(area.nearLeft)
+                             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
+                             */
+
+                            offscreen_landmarks = new ArrayList<>();
+
+
+                            for (int i = 0; i < landmarks.size(); i++) {
+                                Landmark l = landmarks.get(i);
+                                l.removeVisualization(mMapboxMap);
+                                if (!l.isOffScreen(mMapboxMap)) {
+                                    l.drawOnScreenMarker(mMapboxMap);
+                                } else {
+                                    offscreen_landmarks.add(l);
+                                }
+                            }
+
+                            String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
+                            boolean tp_help = true;
+                            for (int i = 0; i < offscreen_landmarks.size(); i++) {
+                                Landmark lm = offscreen_landmarks.get(i);
+                                switch (visualisationType) {
+                                    case "0": //Wedges
+                                        lm.drawWedge(mMapboxMap, getApplicationContext());
+
+                                        break;
+                                    case "1": //Tangible Pointer
+                                        if (tp_help) {
+                                            globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
+                                                    Landmark.getBboxPolygonCoordinates(mMapboxMap)));
+                                            List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
+                                                    globals.getOnScreenFrameCoords());
+                                            globals.setOnScreenAnchors(onScreenAnchors);
+                                            tp_help = false;
+                                        }
+                                        lm.drawTangiblePointer(mMapboxMap, getApplicationContext());
+                                        break;
+
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                });
                 startLocationUpdates();
                 mapboxMap.getUiSettings().setCompassEnabled(false);
                 mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
@@ -274,7 +334,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
 
 
         if (currentJtsRouteLs != null) {
@@ -282,59 +341,18 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             moveCurrentPositionMarker(mCurrentLocationSnap);
         }
 
-        if (mCurrentBearing == 361) {
+        if (Math.abs(mCurrentBearing - mCurrentLocation.getBearing()) > BEARING_THRESHOLD) {
             mCurrentBearing = mCurrentLocation.getBearing();
         }
 
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
+                .zoom(15)
+                .bearing(mCurrentBearing)
+                .tilt(0)
+                .build();
         if (mMapboxMap != null) {
-
-
-            MapboxMap map_temp = mMapboxMap;
-            /**
-            bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
-             .add(area.farRight).add(area.nearRight).add(area.nearLeft)
-             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
-            */
-
-
-            offscreen_landmarks = new ArrayList<>();
-
-
-            for (int i = 0; i < landmarks.size(); i++) {
-                Landmark l = landmarks.get(i);
-                l.removeVisualization(mMapboxMap);
-                if (!l.isOffScreen(mMapboxMap)) {
-                    l.drawOnScreenMarker(mMapboxMap);
-                } else {
-                    offscreen_landmarks.add(l);
-                }
-            }
-
-            String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
-            boolean tp_help = true;
-            for (int i = 0; i < offscreen_landmarks.size(); i++) {
-                Landmark lm = offscreen_landmarks.get(i);
-                switch (visualisationType) {
-                    case "0": //Wedges
-                        lm.drawWedge(mMapboxMap, getApplicationContext());
-
-                        break;
-                    case "1": //Tangible Pointer
-                        if (tp_help) {
-                            globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                                    Landmark.getBboxPolygonCoordinates(mMapboxMap)));
-                            List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
-                                    globals.getOnScreenFrameCoords());
-                            globals.setOnScreenAnchors(onScreenAnchors);
-                            tp_help = false;
-                        }
-                        lm.drawTangiblePointer(mMapboxMap, getApplicationContext());
-                        break;
-
-                    default:
-                        break;
-                }
-            }
+            mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
     }
 
@@ -425,17 +443,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
      * @param location
      */
     private void moveCurrentPositionMarker(Location location) {
-
-        if (Math.abs(mCurrentBearing - location.getBearing()) > BEARING_THRESHOLD) {
-            mCurrentBearing = location.getBearing();
-        }
-
-        CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(new LatLng(location.getLatitude(), location.getLongitude()))
-                .zoom(15)
-                .bearing(mCurrentBearing)
-                .build();
-
         MarkerOptions options = new MarkerOptions()
                 .position(new LatLng(location.getLatitude(), location.getLongitude()))
                 .icon(mCurrentPositionIcon);
@@ -446,7 +453,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         } else {
             currentPositionMarker = mMapboxMap.addMarker(options);
         }
-        mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
     }
 
     private int getIconID(String name) {
