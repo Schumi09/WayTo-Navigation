@@ -10,6 +10,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Annotation;
@@ -166,14 +167,23 @@ public class Landmark {
             Coordinate intersection_heading_coord = DistanceOp.nearestPoints(bbox_new, landmark_sl)[0];
             LatLng intersection_heading = map.getProjection().fromScreenLocation(
                     new PointF((float)intersection_heading_coord.x, (float)intersection_heading_coord.y));
-            Coordinate intersection_coord = DistanceOp.nearestPoints(bbox_px, landmark_sl)[0];
+            Coordinate[] intersection_coords = DistanceOp.nearestPoints(bbox_px, landmark_sl);
+            Log.d(this.landmark.getName(), landmark_sl +"");
+            Log.d(this.landmark.getName(), bbox_px.toString());
+            for (int i=0; i<intersection_coords.length; i++) {
+                double d = landmark_sl.distance(new GeometryFactory().createPoint(intersection_coords[i]));
+                Log.d(this.landmark.getName(), i + " " + d + " " + intersection_coords[i]);
+            }
+            Coordinate intersection_coord = intersection_coords[0];
             LatLng intersection = map.getProjection().fromScreenLocation(
                     new PointF((float)intersection_coord.x, (float)intersection_coord.y));
 
+
             double distanceToScreen = distanceToScreen(map, intersection); //in pixel
             double leg = calculateLeg(distanceToScreen);
-            double distance_ratio = calculateDistanceRatio(map);
-            double distance = (leg * distance_ratio);
+            double ratio = leg / distanceToScreen;
+            double true_distance = intersection.distanceTo(this.landmark.getLocationLatLng());
+            double distance = ratio * true_distance;
             //double map_orientation = map.getCameraPosition().bearing;
             double heading = heading(landmark.getLocationLatLng(), intersection_heading);// - map_orientation;
             double aperture = calculateAperture(distanceToScreen, leg);
@@ -181,23 +191,25 @@ public class Landmark {
             LatLng p1 = calculateTargetLatLng(this.landmark.getLocationLatLng(), heading, -(aperture / 2), distance);
             LatLng p2 = calculateTargetLatLng(this.landmark.getLocationLatLng(), heading, (aperture / 2), distance);
             LatLng mid_point = calculateMidPoint(p1, p2);
-
-            PolygonOptions polygonOption = new PolygonOptions()
+            Log.d("Wedge", this.landmark.getName() + " Distance to screen px: " + distanceToScreen + " True distance " + true_distance + " Leg " + leg + " Ratio " + ratio + " Distance " + distance);
+            PolylineOptions polygonOption = new PolylineOptions()
                     .add(locationLatLng)
                     .add(p1)
-                    .add(mid_point)
+                    //.add(mid_point)
                     .add(p2)
-                    .fillColor(Color.parseColor("#00000000"))
-                    .strokeColor(Color.parseColor("#990000"));
+                    .add(locationLatLng)
+                    //.fillColor(Color.parseColor("#00000000"))
+                    .width(1.5f)
+                    .color(Color.parseColor("#990000"));
+            this.visualization.add(map.addPolyline(new PolylineOptions().add(landmark.getLocationLatLng()).add(intersection).color(Color.parseColor("#990000"))));
 
-            this.visualization.add(map.addPolygon(polygonOption));
-            com.mapbox.mapboxsdk.annotations.Polygon polygon = (com.mapbox.mapboxsdk.annotations.Polygon) this.visualization.get(0);
-            drawWedgeMarker(map, polygon);
+            this.visualization.add(map.addPolyline(polygonOption));
+            //com.mapbox.mapboxsdk.annotations.Polygon Polyline = (com.mapbox.mapboxsdk.annotations.Polyline) this.visualization.get(0);
+            drawWedgeMarker(map, mid_point);
 
         }
 
-        private void drawWedgeMarker(MapboxMap map, com.mapbox.mapboxsdk.annotations.Polygon polygon) {
-            LatLng mid_point = polygon.getPoints().get(2);
+        private void drawWedgeMarker(MapboxMap map, LatLng mid_point) {
             this.visualization.add(map.addMarker(new MarkerOptions()
                     .position(
                             new LatLng(mid_point.getLatitude(), mid_point.getLongitude()))
@@ -220,7 +232,7 @@ public class Landmark {
             center = transform_coordinate(center);
             GeometricShapeFactory gsf = new GeometricShapeFactory();
             gsf.setSize(radius * 2); // radius
-            gsf.setNumPoints(50);
+            gsf.setNumPoints(200);
             gsf.setCentre(center);
             LineString coordinates = gsf.createArc(start_angle, end_angle);
             coordinates = new GeometryFactory().createLineString(transform_coordinates(coordinates.getCoordinates()));
@@ -235,7 +247,7 @@ public class Landmark {
             double max_x = coordinates[1].x;
             double min_y = coordinates[0].y;
             double max_y = coordinates[2].y;
-            double OFFSET = max_y * 1/3;
+            double OFFSET = max_y * 1/5;
 
 
             LineString arc_top_right = createArc(new Coordinate(max_x - OFFSET, min_y + OFFSET), OFFSET, 0, Math.PI /2);
@@ -272,13 +284,20 @@ public class Landmark {
          * @return
          */
         private double calculateLeg(double distanceToScreen) {
-            double INTRUSION_CONSTANT = 20;
+            double INTRUSION_CONSTANT = 150;
             double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
-            return leg + 40;
+            return leg;
         }
 
         private double calculateAperture(double dist, double leg) {
             return Math.toDegrees((5 + dist * 0.05) / leg);
+        }
+
+        private double calculateDistance(double screen_distance, LatLng intersection) {
+            double distance = intersection.distanceTo(this.landmark.getLocationLatLng());
+
+
+            return 0;
         }
     }
 
@@ -440,7 +459,7 @@ public class Landmark {
 
 
 
-
+    /**
     private double calculateDistanceRatio(MapboxMap map) {
         double ratio;
         LatLng screenEdge1_wgs84 = map.getProjection().getVisibleRegion().farLeft;
@@ -451,7 +470,7 @@ public class Landmark {
         double distance_px = calculatePixelDistance(screenEdge1_px, screenEdge2_px);
         ratio = distance_wgs84 / distance_px;
         return ratio;
-    }
+    }*/
 
     private LatLng calculateTargetLatLng(LatLng origin, double heading, double angle, double dist) {
         com.google.android.gms.maps.model.LatLng gLatLngLandmark = new
@@ -466,7 +485,11 @@ public class Landmark {
     private double distanceToScreen(MapboxMap map, LatLng intersection) {
         PointF landmark_sl = map.getProjection().toScreenLocation(this.locationLatLng);
         PointF intersection_sl = map.getProjection().toScreenLocation(intersection);
-        return calculatePixelDistance(landmark_sl, intersection_sl);
+        return pointF2Coordinate(landmark_sl).distance(pointF2Coordinate(intersection_sl));
+    }
+
+    private Coordinate pointF2Coordinate(PointF pointF) {
+        return new Coordinate(pointF.x, pointF.y);
     }
 
     private double calculatePixelDistance(PointF a, PointF b) {
