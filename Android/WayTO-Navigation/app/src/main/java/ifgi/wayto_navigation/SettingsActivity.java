@@ -2,13 +2,14 @@ package ifgi.wayto_navigation;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 
 import ifgi.wayto_navigation.fragments.SettingsFragment;
 
 /**
  * Created by Daniel on 08.04.2016.
  */
-public class SettingsActivity extends Activity {
+public class SettingsActivity extends AppCompatActivity {
     public SettingsActivity() {
         super();
     }

@@ -29,7 +29,7 @@
         <activity
             android:name=".SettingsActivity"
             android:label="Settings"
-            android:theme="@style/ThemeOverlay.AppCompat.Light"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:screenOrientation="landscape"/>
         <service android:name="com.mapbox.mapboxsdk.telemetry.TelemetryService" />
         <!-- ATTENTION: This was auto-generated to add Google Play services to your project for
