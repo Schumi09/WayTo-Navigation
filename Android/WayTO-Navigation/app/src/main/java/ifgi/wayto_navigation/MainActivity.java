@@ -33,6 +33,7 @@ import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.location.LocationServices;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
@@ -172,6 +173,7 @@ public class MainActivity extends AppCompatActivity {
         mapView.setStyleUrl("mapbox://styles/schumi91/cimm7mq0i009dzpmckjmo8u4u");
         mapView.onCreate(savedInstanceState);
         toggleFullscreen();
+        LocationServices.getLocationServices(this).toggleGPS(true);
         myToolbar.bringToFront();
 
 
@@ -485,7 +487,7 @@ public class MainActivity extends AppCompatActivity {
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        mMapboxMap.setMyLocationEnabled(true);
+        //mMapboxMap.setMyLocationEnabled(true);
     }
 
 
