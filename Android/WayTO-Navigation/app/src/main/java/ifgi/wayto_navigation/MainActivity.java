@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-                        if (mMapboxMap != null && mapboxMap != null) {
+                        if (mMapboxMap != null && mCurrentLocation != null) {
                             //MapboxMap map_temp = mMapboxMap;
                             /**
                              bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
