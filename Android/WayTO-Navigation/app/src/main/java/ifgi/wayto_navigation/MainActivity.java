@@ -8,12 +8,13 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -23,15 +24,6 @@ import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
-import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
@@ -47,11 +39,11 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.services.Constants;
 import com.mapbox.services.commons.ServicesException;
 import com.mapbox.services.commons.models.Position;
-import com.mapbox.services.directions.v4.models.Waypoint;
 import com.mapbox.services.directions.v4.DirectionsCriteria;
 import com.mapbox.services.directions.v4.MapboxDirections;
 import com.mapbox.services.directions.v4.models.DirectionsResponse;
 import com.mapbox.services.directions.v4.models.DirectionsRoute;
+import com.mapbox.services.directions.v4.models.Waypoint;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
@@ -70,7 +62,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
+public class MainActivity extends AppCompatActivity {
 
     /**
      * Global variables
@@ -100,10 +92,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
 
-
-    protected GoogleApiClient mGoogleApiClient;
-
-    protected LocationRequest mLocationRequest;
     protected Icon mCurrentPositionIcon;
     protected Location mCurrentLocation;
     protected Location mCurrentLocationSnap;
@@ -136,14 +124,14 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     protected DirectionsRoute currentRoute = null;
     protected LineString currentJtsRouteLs = null;
 
-    protected android.support.v7.app.ActionBar actionBar;
+    protected ActionBar actionBar;
+
+    private SharedPreferences prefs;
+    private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
-    private GoogleApiClient client;
-    private SharedPreferences prefs;
-    private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
 
 
     @Override
@@ -152,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         globals = Globals.getInstance();
-        mCurrentPositionIcon = getIcon(R.drawable.my_location);
+        mCurrentPositionIcon = getIcon(R.drawable.position_marker);
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -162,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         setSupportActionBar(myToolbar);
         actionBar = getSupportActionBar();
 
-
+        //todo: remove when included in MAS
         Locale locale = new Locale("en_US");
         Locale.setDefault(locale);
         Configuration config = new Configuration();
@@ -179,10 +167,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
         setIcons();
 
-
-        buildGoogleApiClient();
-        createLocationRequest();
-
         /** Create a mapView and give it some properties */
         mapView = (MapView) findViewById(R.id.mapview);
         mapView.setStyleUrl("mapbox://styles/schumi91/cimm7mq0i009dzpmckjmo8u4u");
@@ -195,23 +179,32 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             @Override
             public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
+
+                mMapboxMap.setOnMyLocationChangeListener(new MapboxMap.OnMyLocationChangeListener() {
+                    @Override
+                    public void onMyLocationChange(@Nullable Location location) {
+                        if (location != null) {
+                            onLocationChanged(location);
+                        }
+                    }
+                });
+
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
 
                     @Override
                     public void onCameraChange(CameraPosition position) {
                         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
-                        if (mCurrentBearing == 361) {
-                            mCurrentBearing = mCurrentLocation.getBearing();
-                        }
+
 
                         if (mMapboxMap != null && mapboxMap != null) {
-                            MapboxMap map_temp = mMapboxMap;
+                            //MapboxMap map_temp = mMapboxMap;
                             /**
                              bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
                              .add(area.farRight).add(area.nearRight).add(area.nearLeft)
                              .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
                              */
+
 
                             offscreen_landmarks = new ArrayList<>();
 
@@ -254,7 +247,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                         }
                     }
                 });
-                startLocationUpdates();
+                //startLocationUpdates();
                 mapboxMap.getUiSettings().setCompassEnabled(false);
                 mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
                 mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
@@ -282,7 +275,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                                                           String key) {
                         if (key.equals(VISUALIZATION_TYPE_KEY)) {
                             mapboxMap.removeAnnotations();
-                            if (currentRoute != null) { drawRoute(currentRoute); }
+                            if (currentRoute != null) {
+                                drawRoute(currentRoute);
+                            }
                         }
                     }
                 };
@@ -292,11 +287,12 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         });
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
     }
 
 
-    private void toggleActionBar(android.support.v7.app.ActionBar actionBar) {
+    private void toggleActionBar(ActionBar actionBar) {
         if (actionBar.isShowing()) {
             actionBar.hide();
         } else {
@@ -320,14 +316,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
     }
 
     /**
-     * onLocationChanged event.
+     * execute on OnMyLocationChanged event.
      * Once the location has changed a marker displays the user's current position and updates the
      * mapview to the position as center.
      * todo: distinguish between snap and not snapped location in wedge call
      *
      * @param location
      */
-    @Override
     public void onLocationChanged(Location location) {
 
         Log.i("location", location.toString());
@@ -335,6 +330,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
 
+        if (mCurrentBearing == 361) {
+            mCurrentBearing = mCurrentLocation.getBearing();
+        }
 
         if (currentJtsRouteLs != null) {
             mCurrentLocationSnap = snapLocation(mCurrentLocation);
@@ -376,7 +374,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
                 if (response.body() == null) {
                     Log.e(TAG, "No routes found, make sure you set the right user and access token.");
                     return;
-                }else {
+                } else {
 
                     // Print some info about the route
                     currentRoute = response.body().getRoutes().get(0);
@@ -437,23 +435,24 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
 
 
     /**
-     * Moving mapview to current position
-     * Current position as center, bearing from location
-     *
+     * shows current user position
      * @param location
      */
     private void moveCurrentPositionMarker(Location location) {
-        MarkerOptions options = new MarkerOptions()
-                .position(new LatLng(location.getLatitude(), location.getLongitude()))
-                .icon(mCurrentPositionIcon);
-        //todo: use	setPosition(LatLng position)
+
+        if (mMapboxMap == null) {return;}
+
         if (currentPositionMarker != null) {
-            mMapboxMap.removeMarker(currentPositionMarker);
-            currentPositionMarker = mMapboxMap.addMarker(options);
+            currentPositionMarker.setPosition(
+                    new LatLng(location.getLatitude(), location.getLongitude()));
         } else {
+            MarkerOptions options = new MarkerOptions()
+                    .position(new LatLng(location.getLatitude(), location.getLongitude()))
+                    .icon(mCurrentPositionIcon);
             currentPositionMarker = mMapboxMap.addMarker(options);
         }
     }
+
 
     private int getIconID(String name) {
         try {
@@ -470,31 +469,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         return mIconFactory.fromDrawable(mIconDrawable);
     }
 
-    /**
-     * Builds a GoogleApiClient.
-     */
-    protected synchronized void buildGoogleApiClient() {
-        Log.i(TAG, "Building GoogleApiClient");
-        if (mGoogleApiClient == null) {
-            mGoogleApiClient = new GoogleApiClient.Builder(this)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .addApi(LocationServices.API)
-                    .build();
-        }
-    }
-
-    /**
-     * Sets up the location request.
-     * These settings are appropriate for mapping applications that show real-time location
-     * updates.
-     */
-    protected void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
-        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-    }
 
     /**
      * Requests location updates from the FusedLocationApi.
@@ -511,84 +485,31 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        LocationServices.FusedLocationApi.requestLocationUpdates(
-                mGoogleApiClient, mLocationRequest, this);
+        mMapboxMap.setMyLocationEnabled(true);
     }
-
-    /**
-     * Removes location updates from the FusedLocationApi.
-     */
-    protected void stopLocationUpdates() {
-        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
-    }
-
-    /**
-     * Handles the Start Updates button and requests start of location updates. Does nothing if
-     * updates have already been requested.
-     */
 
 
     @Override
     protected void onStart() {
-        mGoogleApiClient.connect();
         super.onStart();
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client.connect();
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app deep link URI is correct.
-                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
-        );
-        AppIndex.AppIndexApi.start(client, viewAction);
     }
 
     @Override
     protected void onStop() {
-        mGoogleApiClient.disconnect();
         super.onStop();
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app deep link URI is correct.
-                Uri.parse("android-app://ifgi.wayto_navigation/http/host/path")
-        );
-        AppIndex.AppIndexApi.end(client, viewAction);
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client.disconnect();
     }
 
     @Override
     public void onPause() {
         super.onPause();
         mapView.onPause();
-        // Stop location updates to save battery
-        if (mGoogleApiClient.isConnected()) {
-            stopLocationUpdates();
-        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
         mapView.onResume();
-        if (mGoogleApiClient.isConnected() && mRequestingLocationUpdates) {
-            startLocationUpdates();
-        }
+
         if (mMapboxMap != null) {
             mMapboxMap.removeAnnotations();
 
@@ -609,43 +530,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionCallbac
         super.onSaveInstanceState(outState);
         mapView.onSaveInstanceState(outState);
     }
-
-    @Override
-    public void onConnected(Bundle bundle) {
-        Log.i(TAG, "Connected to GoogleApiClient");
-
-        if (mCurrentLocation == null) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
-            mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-            mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        }
-
-        if (mRequestingLocationUpdates) {
-            startLocationUpdates();
-        }
-
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.i(TAG, "Connection suspended");
-        mGoogleApiClient.connect();
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
-    }
-
 
     private void showMessage(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
