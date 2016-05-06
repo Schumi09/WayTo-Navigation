@@ -173,7 +173,6 @@ public class MainActivity extends AppCompatActivity {
         mapView.setStyleUrl("mapbox://styles/schumi91/cimm7mq0i009dzpmckjmo8u4u");
         mapView.onCreate(savedInstanceState);
         toggleFullscreen();
-        LocationServices.getLocationServices(this).toggleGPS(true);
         myToolbar.bringToFront();
 
 
@@ -190,6 +189,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 });
+                LocationServices.getLocationServices(MainActivity.this).toggleGPS(true);
 
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
 
@@ -328,6 +328,7 @@ public class MainActivity extends AppCompatActivity {
     public void onLocationChanged(Location location) {
 
         Log.i("location", location.toString());
+        if (mMapboxMap == null) return;
 
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
