@@ -9,9 +9,12 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
@@ -24,6 +27,8 @@ import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.hs.gpxparser.GPXParser;
+import com.hs.gpxparser.modal.GPX;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
@@ -51,9 +56,16 @@ import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.operation.distance.DistanceOp;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -63,7 +75,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLocationChangeListener {
 
     /**
      * Global variables
@@ -78,6 +90,10 @@ public class MainActivity extends AppCompatActivity {
     private MapboxMap mMapboxMap;
     private Marker currentPositionMarker;
     private Polyline currentRoutePolyline = null;
+
+    private List<Location> simulation_locations;
+    private boolean simulate = true;
+
 
     protected static final String TAG = "WayTO-Navigation";
 
@@ -167,6 +183,9 @@ public class MainActivity extends AppCompatActivity {
         landmarks.add(zoo);
 
         setIcons();
+        final ArrayList<Waypoint> positions = new ArrayList<>();
+        positions.add(origin);
+        positions.add(destination);
 
         /** Create a mapView and give it some properties */
         mapView = (MapView) findViewById(R.id.mapview);
@@ -181,72 +200,15 @@ public class MainActivity extends AppCompatActivity {
             public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
 
-                mMapboxMap.setOnMyLocationChangeListener(new MapboxMap.OnMyLocationChangeListener() {
-                    @Override
-                    public void onMyLocationChange(@Nullable Location location) {
-                        if (location != null) {
-                            onLocationChanged(location);
-                        }
-                    }
-                });
+                mMapboxMap.setOnMyLocationChangeListener(MainActivity.this);
                 LocationServices.getLocationServices(MainActivity.this).toggleGPS(true);
+                mMapboxMap.setMyLocationEnabled(true);
 
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
 
                     @Override
                     public void onCameraChange(CameraPosition position) {
-                        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
-
-
-                        if (mMapboxMap != null && mCurrentLocation != null) {
-                            //MapboxMap map_temp = mMapboxMap;
-                            /**
-                             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
-                             .add(area.farRight).add(area.nearRight).add(area.nearLeft)
-                             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
-                             */
-
-
-                            offscreen_landmarks = new ArrayList<>();
-
-
-                            for (int i = 0; i < landmarks.size(); i++) {
-                                Landmark l = landmarks.get(i);
-                                l.removeVisualization(mMapboxMap);
-                                if (!l.isOffScreen(mMapboxMap)) {
-                                    l.drawOnScreenMarker(mMapboxMap);
-                                } else {
-                                    offscreen_landmarks.add(l);
-                                }
-                            }
-
-                            String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
-                            boolean tp_help = true;
-                            for (int i = 0; i < offscreen_landmarks.size(); i++) {
-                                Landmark lm = offscreen_landmarks.get(i);
-                                switch (visualisationType) {
-                                    case "0": //Wedges
-                                        lm.drawWedge(mMapboxMap, getApplicationContext());
-
-                                        break;
-                                    case "1": //Tangible Pointer
-                                        if (tp_help) {
-                                            globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                                                    Landmark.getBboxPolygonCoordinates(mMapboxMap)));
-                                            List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
-                                                    globals.getOnScreenFrameCoords());
-                                            globals.setOnScreenAnchors(onScreenAnchors);
-                                            tp_help = false;
-                                        }
-                                        lm.drawTangiblePointer(mMapboxMap, getApplicationContext());
-                                        break;
-
-                                    default:
-                                        break;
-                                }
-                            }
-                        }
                     }
                 });
                 //startLocationUpdates();
@@ -255,7 +217,12 @@ public class MainActivity extends AppCompatActivity {
                 mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
                 mapboxMap.getUiSettings().setAttributionEnabled(false);
                 try {
-                    getRoute();
+                    if(simulate) {
+                        simulate_route();
+                    }
+                    else{
+                        getRoute(positions);
+                    }
                 } catch (ServicesException e) {
                     e.printStackTrace();
                 }
@@ -293,6 +260,12 @@ public class MainActivity extends AppCompatActivity {
         // See https://g.co/AppIndexing/AndroidStudio for more information.
     }
 
+    @Override
+    public void onMyLocationChange(@Nullable Location location) {
+        if (location != null) {
+            onLocationChanged(location);
+        }
+    }
 
     private void toggleActionBar(ActionBar actionBar) {
         if (actionBar.isShowing()) {
@@ -349,18 +322,75 @@ public class MainActivity extends AppCompatActivity {
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
                 .zoom(15)
-                .bearing(mCurrentBearing)
+                .bearing(1)
                 .tilt(0)
                 .build();
         if (mMapboxMap != null) {
-            mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            Log.d("Camera", cameraPosition.toString());
+            mMapboxMap.setCameraPosition(cameraPosition);
+            //mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        }
+        Log.d("Camera", "moved");
+
+        landmarkVisualization();
+    }
+
+    private void landmarkVisualization() {
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        if (mMapboxMap != null && mCurrentLocation != null) {
+            //MapboxMap map_temp = mMapboxMap;
+            /**
+             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
+             .add(area.farRight).add(area.nearRight).add(area.nearLeft)
+             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
+             */
+
+
+            offscreen_landmarks = new ArrayList<>();
+
+
+            for (int i = 0; i < landmarks.size(); i++) {
+                Landmark l = landmarks.get(i);
+                l.removeVisualization(mMapboxMap);
+                if (!l.isOffScreen(mMapboxMap)) {
+                    l.drawOnScreenMarker(mMapboxMap);
+                } else {
+                    offscreen_landmarks.add(l);
+                }
+            }
+
+            String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
+            boolean tp_help = true;
+            for (int i = 0; i < offscreen_landmarks.size(); i++) {
+                Landmark lm = offscreen_landmarks.get(i);
+                switch (visualisationType) {
+                    case "0": //Wedges
+                        lm.drawWedge(mMapboxMap, getApplicationContext());
+
+                        break;
+                    case "1": //Tangible Pointer
+                        if (tp_help) {
+                            globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
+                                    Landmark.getBboxPolygonCoordinates(mMapboxMap)));
+                            List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
+                                    globals.getOnScreenFrameCoords());
+                            globals.setOnScreenAnchors(onScreenAnchors);
+                            tp_help = false;
+                        }
+                        lm.drawTangiblePointer(mMapboxMap, getApplicationContext());
+                        break;
+
+                    default:
+                        break;
+                }
+            }
         }
     }
 
-    private void getRoute() throws ServicesException {
-        ArrayList<Waypoint> positions = new ArrayList<>();
-        positions.add(origin);
-        positions.add(destination);
+
+    private void getRoute(List<Waypoint> positions) throws ServicesException {
+
         MapboxDirections md = new MapboxDirections.Builder()
                 .setAccessToken("pk.eyJ1Ijoic2NodW1pOTEiLCJhIjoiY2lsZ294Mmc2MDA1ZHZrbTR3aHd2NnhqbSJ9.YPm4QaT1_13qooe7XLBovA")
                 .setWaypoints(positions)
@@ -382,6 +412,9 @@ public class MainActivity extends AppCompatActivity {
                     // Print some info about the route
                     currentRoute = response.body().getRoutes().get(0);
                     drawRoute(currentRoute);
+                    if(simulate) {
+                        mockLocations(simulation_locations);
+                    }
                     Log.d(TAG, "Distance: " + currentRoute.getDistance());
                 }
             }
@@ -444,7 +477,7 @@ public class MainActivity extends AppCompatActivity {
     private void moveCurrentPositionMarker(Location location) {
 
         if (mMapboxMap == null) {return;}
-
+        /**
         if (currentPositionMarker != null) {
             currentPositionMarker.setPosition(
                     new LatLng(location.getLatitude(), location.getLongitude()));
@@ -453,6 +486,10 @@ public class MainActivity extends AppCompatActivity {
                     .position(new LatLng(location.getLatitude(), location.getLongitude()))
                     .icon(mCurrentPositionIcon);
             currentPositionMarker = mMapboxMap.addMarker(options);
+        }
+        */
+        if (mMapboxMap.getMyLocation() != null) {
+            mMapboxMap.getMyLocation().set(location);
         }
     }
 
@@ -472,6 +509,101 @@ public class MainActivity extends AppCompatActivity {
         return mIconFactory.fromDrawable(mIconDrawable);
     }
 
+    private void simulate_route() {
+        File file = new File(Environment.getExternalStorageDirectory(), "test.gpx");
+
+        GPXParser p = new GPXParser();
+        FileInputStream in = null;
+        try {
+            in = new FileInputStream(file);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        try {
+            GPX gpx = p.parseGPX(in);
+            HashSet<com.hs.gpxparser.modal.Waypoint> wps = gpx.getWaypoints();
+            Iterator it = wps.iterator();
+            List<com.hs.gpxparser.modal.Waypoint> waypoints = new ArrayList<>();
+            while (it.hasNext()) {
+                waypoints.add((com.hs.gpxparser.modal.Waypoint) it.next());
+            }
+            Collections.sort(waypoints, new Comparator<com.hs.gpxparser.modal.Waypoint>() {
+                @Override
+                public int compare(com.hs.gpxparser.modal.Waypoint m1, com.hs.gpxparser.modal.Waypoint m2) {
+                    return m1.getTime().compareTo(m2.getTime());
+                }
+
+            });
+            List<Location> locations = new ArrayList<>();
+            for (int i = 0; i < waypoints.size(); i++) {
+                Location mockLocation = new Location("mock");
+                com.hs.gpxparser.modal.Waypoint wp = waypoints.get(i);
+                mockLocation.setLatitude(wp.getLatitude());
+                mockLocation.setLongitude(wp.getLongitude());
+                float bearing;
+                if (i != 0) {
+                    bearing = locations.get(i - 1).bearingTo(mockLocation);
+                } else {
+                    bearing = 0;
+                }
+                mockLocation.setBearing(bearing);
+                mockLocation.setAccuracy(1.0f);
+                mockLocation.setTime(wp.getTime().getTime());
+                locations.add(mockLocation);
+            }
+            List<Waypoint> pts = locationsToWaypoints(locations);
+            getRoute(pts);
+            simulation_locations = locations;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @UiThread
+    public void mockLocations(final List<Location> locations) {
+        new Thread(new Runnable() {
+
+            public void run() {
+                Looper.prepare();
+                Location previous = locations.get(0);
+                mock(previous);
+                for (int i = 1; i < locations.size(); i++) {
+                    Location current = locations.get(i);
+                    long diff = current.getTime() - previous.getTime();
+                    try {
+                        Thread.sleep(diff / 2);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    previous = current;
+                    mock(current);
+                }
+                Looper.loop();
+
+            }
+        }).start();
+    }
+
+
+    private void mock(final Location mockLocation) {
+        com.mapzen.android.lost.api.LocationServices.FusedLocationApi.setMockMode(true);
+        com.mapzen.android.lost.api.LocationServices.FusedLocationApi.setMockLocation(mockLocation);
+    }
+
+    private List<Waypoint> locationsToWaypoints(List<Location> locations) {
+        Log.d(TAG, locations.size() + "");
+        List<com.mapbox.services.directions.v4.models.Waypoint> waypoints = new ArrayList<>();
+        int steps = (int) Math.ceil(locations.size() / 25);
+        Location l;
+        for (int i = 0; waypoints.size() < 24; i += steps) {
+            l = locations.get(i);
+            waypoints.add(new Waypoint(l.getLongitude(), l.getLatitude()));
+        }
+        l = locations.get(locations.size() - 1);
+        waypoints.add(new Waypoint(l.getLongitude(), l.getLatitude()));
+        Log.d(TAG, "" + waypoints.size());
+        return waypoints;
+    }
 
     /**
      * Requests location updates from the FusedLocationApi.
