@@ -661,12 +661,23 @@ public class Landmark {
         if (points.get(position).isFree()) {
             return position;
         } else {
-            position++;
+            position = positionIndex(position, points.size());
             while (!points.get(position).isFree()) {
-                position++;
+                position = positionIndex(position, points.size());
             }
             return position;
         }
+    }
+
+    private static int positionIndex(int position, int max) {
+        int i;
+        if (position == max -1) {
+            i = 0;
+        }else {
+            position++;
+            i = position;
+        }
+        return i;
     }
 
     private Coordinate[] bboxCoordsSL(MapboxMap map) {
