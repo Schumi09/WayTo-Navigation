@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
@@ -300,9 +301,11 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
      */
     public void onLocationChanged(Location location) {
 
-        Log.i("location", location.toString());
         if (mMapboxMap == null) return;
 
+        if (location.hasSpeed()) {
+            Log.d("Speed", location.getSpeed() * 3.6 + "");
+        }
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
 
@@ -315,23 +318,22 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
             moveCurrentPositionMarker(mCurrentLocationSnap);
         }
 
-        if (Math.abs(mCurrentBearing - mCurrentLocation.getBearing()) > BEARING_THRESHOLD) {
-            mCurrentBearing = mCurrentLocation.getBearing();
+        if (location.hasSpeed() && location.getSpeed() > 2) {
+            if (Math.abs(mCurrentBearing - mCurrentLocation.getBearing()) > BEARING_THRESHOLD) {
+                mCurrentBearing = mCurrentLocation.getBearing();
+            }
         }
 
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
                 .zoom(15)
-                .bearing(1)
+                .bearing(mCurrentBearing)
                 .tilt(0)
                 .build();
         if (mMapboxMap != null) {
-            Log.d("Camera", cameraPosition.toString());
             mMapboxMap.setCameraPosition(cameraPosition);
             //mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
-        Log.d("Camera", "moved");
-
         landmarkVisualization();
     }
 
@@ -370,7 +372,12 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
 
                         break;
                     case "1": //Tangible Pointer
+
                         if (tp_help) {
+                            if (globals.getArrow_bmp() == null) {
+                                globals.setArrow_bmp(BitmapFactory.decodeResource(
+                                        this.getResources(), R.drawable.arrow));
+                            }
                             globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
                                     Landmark.getBboxPolygonCoordinates(mMapboxMap)));
                             List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
@@ -540,15 +547,21 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                 com.hs.gpxparser.modal.Waypoint wp = waypoints.get(i);
                 mockLocation.setLatitude(wp.getLatitude());
                 mockLocation.setLongitude(wp.getLongitude());
+                long time = wp.getTime().getTime();
+                mockLocation.setTime(time);
                 float bearing;
                 if (i != 0) {
                     bearing = locations.get(i - 1).bearingTo(mockLocation);
+                    double elapsed_time = (mockLocation.getTime()
+                            - locations.get(i - 1).getTime()) / 1000;
+                    double distance = locations.get(i - 1).distanceTo(mockLocation);
+                    float speed = (float) ((distance / elapsed_time));
+                    mockLocation.setSpeed(speed);
                 } else {
                     bearing = 0;
                 }
                 mockLocation.setBearing(bearing);
                 mockLocation.setAccuracy(1.0f);
-                mockLocation.setTime(wp.getTime().getTime());
                 locations.add(mockLocation);
             }
             List<Waypoint> pts = locationsToWaypoints(locations);
@@ -591,7 +604,6 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     }
 
     private List<Waypoint> locationsToWaypoints(List<Location> locations) {
-        Log.d(TAG, locations.size() + "");
         List<com.mapbox.services.directions.v4.models.Waypoint> waypoints = new ArrayList<>();
         int steps = (int) Math.ceil(locations.size() / 25);
         Location l;
@@ -601,7 +613,6 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
         }
         l = locations.get(locations.size() - 1);
         waypoints.add(new Waypoint(l.getLongitude(), l.getLatitude()));
-        Log.d(TAG, "" + waypoints.size());
         return waypoints;
     }
 

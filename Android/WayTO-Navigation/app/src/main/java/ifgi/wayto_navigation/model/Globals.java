@@ -1,8 +1,13 @@
 package ifgi.wayto_navigation.model;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+
 import com.vividsolutions.jts.geom.Coordinate;
 
 import java.util.List;
+
+import ifgi.wayto_navigation.R;
 
 /**
  * Created by Daniel on 20.04.2016.
@@ -36,5 +41,15 @@ public class Globals {
     }
 
     private Coordinate[] onScreenFrameCoords;
+
+    public Bitmap getArrow_bmp() {
+        return arrow_bmp;
+    }
+
+    public void setArrow_bmp(Bitmap bmp) {
+        this.arrow_bmp = bmp;
+    }
+
+    private Bitmap arrow_bmp;
 
 }

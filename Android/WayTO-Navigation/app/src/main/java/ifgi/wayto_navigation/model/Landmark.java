@@ -388,16 +388,14 @@ public class Landmark {
 
 
         private MarkerOptions setArrow(LatLng position, Double angle) {
-
-            Bitmap icon_bmp = BitmapFactory.decodeResource(
-                    this.context.getResources(), R.drawable.arrow);
+            Globals globals = Globals.getInstance();
+            Bitmap icon_bmp = globals.getArrow_bmp();
             Matrix matrix = new Matrix();
             matrix.postRotate(angle.floatValue());
             icon_bmp = Bitmap.createBitmap(icon_bmp, 0, 0, icon_bmp.getWidth(), icon_bmp.getHeight(), matrix, true);
             IconFactory mIconFactory = IconFactory.getInstance(this.context);
             Drawable mIconDrawable = new BitmapDrawable(this.context.getResources(), icon_bmp);
             mIconDrawable.setAlpha(Math.round(this.alpha));
-
             Icon icon = mIconFactory.fromDrawable(mIconDrawable);
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(position).icon(icon);
@@ -406,8 +404,8 @@ public class Landmark {
                 icon_bmp.recycle();
                 icon_bmp = null;
             }
-
-            //this.visualization.add(map.addMarker(markerOptions));
+            mIconDrawable = null;
+            icon = null;
             return markerOptions;
         }
 
