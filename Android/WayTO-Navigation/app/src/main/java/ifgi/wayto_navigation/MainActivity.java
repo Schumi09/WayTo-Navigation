@@ -331,7 +331,8 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                 .tilt(0)
                 .build();
         if (mMapboxMap != null) {
-            mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            mMapboxMap.setCameraPosition(cameraPosition);
+            //mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
         landmarkVisualization();
     }
