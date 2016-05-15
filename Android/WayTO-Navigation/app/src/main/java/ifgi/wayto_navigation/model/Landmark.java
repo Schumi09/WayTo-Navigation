@@ -101,7 +101,7 @@ public class Landmark {
     public void visualize(MapboxMap map, Context context) {
 
         if (this.visualization != null) {
-            map.removeAnnotations(this.visualization.getVisualization());
+           this.removeVisualization(map);
         }
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
