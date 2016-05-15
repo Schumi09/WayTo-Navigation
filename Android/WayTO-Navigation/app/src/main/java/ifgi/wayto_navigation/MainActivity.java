@@ -337,59 +337,12 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     }
 
     private void landmarkVisualization() {
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-
         if (mMapboxMap != null && mCurrentLocation != null) {
-            //MapboxMap map_temp = mMapboxMap;
-            /**
-             bbox = mMapboxMap.addPolygon(new PolygonOptions().add(area.farLeft)
-             .add(area.farRight).add(area.nearRight).add(area.nearLeft)
-             .fillColor(Color.parseColor("#00000000")).strokeColor(Color.parseColor("#990000")));
-             */
 
-
-            offscreen_landmarks = new ArrayList<>();
-
-
+            globals.setOnScreenAnchorsTodo(true);
             for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
-                l.removeVisualization(mMapboxMap);
-                if (!l.isOffScreen(mMapboxMap)) {
-                    l.drawOnScreenMarker(mMapboxMap);
-                } else {
-                    offscreen_landmarks.add(l);
-                }
-            }
-
-            String visualisationType = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
-            boolean tp_help = true;
-            for (int i = 0; i < offscreen_landmarks.size(); i++) {
-                Landmark lm = offscreen_landmarks.get(i);
-                switch (visualisationType) {
-                    case "0": //Wedges
-                        lm.drawWedge(mMapboxMap, getApplicationContext());
-
-                        break;
-                    case "1": //Tangible Pointer
-
-                        if (tp_help) {
-                            if (globals.getArrow_bmp() == null) {
-                                globals.setArrow_bmp(BitmapFactory.decodeResource(
-                                        this.getResources(), R.drawable.arrow));
-                            }
-                            globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                                    Landmark.getBboxPolygonCoordinates(mMapboxMap)));
-                            List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
-                                    globals.getOnScreenFrameCoords());
-                            globals.setOnScreenAnchors(onScreenAnchors);
-                            tp_help = false;
-                        }
-                        lm.drawTangiblePointer(mMapboxMap, getApplicationContext());
-                        break;
-
-                    default:
-                        break;
-                }
+                l.visualize(mMapboxMap, getApplicationContext());
             }
         }
     }

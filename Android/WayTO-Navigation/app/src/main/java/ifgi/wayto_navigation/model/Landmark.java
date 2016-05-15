@@ -1,6 +1,7 @@
 package ifgi.wayto_navigation.model;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -10,6 +11,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
@@ -54,34 +56,18 @@ public class Landmark {
     private Point locationJTS;
     private LatLng locationLatLng;
     private PointF locationScreen;
-    private Icon on_screen_icon;
     private Icon off_screen_icon;
     private MarkerOptions on_screen_markerOptions;
-    private Marker on_screen_marker;
+    private Visualization visualization;
+    public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
 
-    private List<Annotation> off_screen_visualization;
-
-    private static double WEDGE_CORNER_RATIO = 0.1;
-
-    public Icon getOn_screen_icon() {
-        return on_screen_icon;
-    }
 
     public Icon getOff_screen_icon() {
         return off_screen_icon;
     }
 
-    public void setOn_screen_icon(Icon on_screen_icon) {
-        this.on_screen_icon = on_screen_icon;
-    }
-
     public void setOff_screen_icon(Icon off_screen_icon) {
         this.off_screen_icon = off_screen_icon;
-    }
-
-
-    public Point getLocationJTS() {
-        return locationJTS;
     }
 
     public String getDescription() {
@@ -111,41 +97,99 @@ public class Landmark {
         return locationLatLng;
     }
 
-    public void setOff_screen_visualization(List<Annotation> visualization) {
-        this.off_screen_visualization = visualization;
+
+    public void visualize(MapboxMap map, Context context) {
+
+        if (this.visualization != null) {
+            map.removeAnnotations(this.visualization.getVisualization());
+        }
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+        String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
+
+        if (!this.isOffScreen(map)) {
+            style = "-1";
+        }
+
+        switch(style) {
+            case "-1":
+                this.visualization = drawOnScreenMarker(map);
+                break;
+            case "0": //Wedges
+                this.visualization = drawWedge(map, context);
+                break;
+            case "1": //Tangible Pointer
+                Globals globals = Globals.getInstance();
+
+                if (globals.getArrow_bmp() == null) {
+                    globals.setArrow_bmp(BitmapFactory.decodeResource(
+                            context.getResources(), R.drawable.arrow));
+                }
+                if (globals.onScreenAnchorsTodo()) {
+                    globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
+                            Landmark.getBboxPolygonCoordinates(map)));
+                    List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
+                            globals.getOnScreenFrameCoords());
+                    globals.setOnScreenAnchors(onScreenAnchors);
+                    globals.setOnScreenAnchorsTodo(false);
+                }
+                this.visualization = drawTangiblePointer(map, context);
+                break;
+        }
+
     }
 
-    private void removeOffScreenVisualization(MapboxMap map) {
-        if (this.off_screen_visualization != null) {
-            map.removeAnnotations(this.off_screen_visualization);
-            this.off_screen_visualization = new ArrayList<>();
-        }
-    }
-
-    private void removeOnScreenVisualization(MapboxMap map) {
-        if (this.on_screen_marker != null) {
-            map.removeAnnotation(this.on_screen_marker);
-        }
-    }
 
     public void removeVisualization(MapboxMap map) {
-        removeOffScreenVisualization(map);
-        removeOnScreenVisualization(map);
+        map.removeAnnotations(this.visualization.getVisualization());
     }
 
-    public class Wedge {
+    private class onScreen extends Visualization {
+
+        List<Annotation> visualization;
+
+        public onScreen(MapboxMap mapboxMap) {
+            this.visualization = new ArrayList<>();
+            this.visualization.add(mapboxMap.addMarker(getOn_screen_markerOptions()));
+        }
+
+        @Override
+        public List<Annotation> getVisualization() {
+            return this.visualization;
+        }
+
+        @Override
+        public void remove(MapboxMap mapboxMap) {
+            mapboxMap.removeAnnotations(this.getVisualization());
+        }
+    }
+
+    public onScreen drawOnScreenMarker(MapboxMap map) {
+        return new onScreen(map);
+    }
+
+    public class Wedge extends Visualization{
 
         public Wedge(MapboxMap map, Landmark landmark, Context context) {
             this.landmark = landmark;
             this.context = context;
             this.visualization = new ArrayList<>();
             draw(map);
-            landmark.setOff_screen_visualization(this.visualization);
         }
 
         private List<Annotation> visualization;
         private Landmark landmark;
         private Context context;
+
+        @Override
+        public List<Annotation> getVisualization() {
+            return this.visualization;
+        }
+
+        @Override
+        public void remove(MapboxMap mapboxMap) {
+            mapboxMap.removeAnnotations(this.getVisualization());
+        }
 
         /**
          * Wedge Off-Screen visualization for distant landmarks
@@ -168,11 +212,12 @@ public class Landmark {
             LatLng intersection_heading = map.getProjection().fromScreenLocation(
                     new PointF((float)intersection_heading_coord.x, (float)intersection_heading_coord.y));
             Coordinate[] intersection_coords = DistanceOp.nearestPoints(bbox_px, landmark_sl);
+            /**
             Log.d(this.landmark.getName(), landmark_sl +"");
-            Log.d(this.landmark.getName(), bbox_px.toString());
+            Log.d(this.landmark.getName(), bbox_px.toString());*/
             for (int i=0; i<intersection_coords.length; i++) {
                 double d = landmark_sl.distance(new GeometryFactory().createPoint(intersection_coords[i]));
-                Log.d(this.landmark.getName(), i + " " + d + " " + intersection_coords[i]);
+                //Log.d(this.landmark.getName(), i + " " + d + " " + intersection_coords[i]);
             }
             Coordinate intersection_coord = intersection_coords[0];
             LatLng intersection = map.getProjection().fromScreenLocation(
@@ -191,7 +236,7 @@ public class Landmark {
             LatLng p1 = calculateTargetLatLng(this.landmark.getLocationLatLng(), heading, -(aperture / 2), distance);
             LatLng p2 = calculateTargetLatLng(this.landmark.getLocationLatLng(), heading, (aperture / 2), distance);
             LatLng mid_point = calculateMidPoint(p1, p2);
-            Log.d("Wedge", this.landmark.getName() + " Distance to screen px: " + distanceToScreen + " True distance " + true_distance + " Leg " + leg + " Ratio " + ratio + " Distance " + distance);
+            //Log.d("Wedge", this.landmark.getName() + " Distance to screen px: " + distanceToScreen + " True distance " + true_distance + " Leg " + leg + " Ratio " + ratio + " Distance " + distance);
             PolylineOptions polygonOption = new PolylineOptions()
                     .add(locationLatLng)
                     .add(p1)
@@ -313,7 +358,7 @@ public class Landmark {
      * Poster presentations of the Spatial Cognition 2014 conference.
      * SFB/TR 8 Report No. 036-06/2014 (pp. 17–20). Bremen / Freiburg.
      */
-    public class TangiblePointer{
+    public class TangiblePointer extends Visualization{
         private List<Annotation> visualization;
         private LatLng onScreenAnchor;
         private Landmark landmark;
@@ -327,7 +372,16 @@ public class Landmark {
             this.onScreenAnchor = this.landmark.onScreenAnchor(map);
             setIcon(map);
             setLine(map);
-            this.landmark.off_screen_visualization = this.visualization;
+        }
+
+        @Override
+        public List<Annotation> getVisualization() {
+            return this.visualization;
+        }
+
+        @Override
+        public void remove(MapboxMap mapboxMap) {
+            mapboxMap.removeAnnotations(this.getVisualization());
         }
 
         private void setIcon(MapboxMap map) {
@@ -415,6 +469,8 @@ public class Landmark {
         return new TangiblePointer(map, this, c);
     }
 
+
+
     /**
      * Calculating a map position to represent the off-screen position
      * @param map current mapboxmap object
@@ -451,25 +507,6 @@ public class Landmark {
                             new LatLng(this.location.getLatitude(), this.location.getLongitude()));
     }
 
-    public void drawOnScreenMarker(MapboxMap map) {
-        this.on_screen_marker = map.addMarker(this.on_screen_markerOptions);
-    }
-
-
-
-    /**
-    private double calculateDistanceRatio(MapboxMap map) {
-        double ratio;
-        LatLng screenEdge1_wgs84 = map.getProjection().getVisibleRegion().farLeft;
-        LatLng screenEdge2_wgs84 = map.getProjection().getVisibleRegion().farRight;
-        double distance_wgs84 = screenEdge1_wgs84.distanceTo(screenEdge2_wgs84);
-        PointF screenEdge1_px = map.getProjection().toScreenLocation(screenEdge1_wgs84);
-        PointF screenEdge2_px = map.getProjection().toScreenLocation(screenEdge2_wgs84);
-        double distance_px = calculatePixelDistance(screenEdge1_px, screenEdge2_px);
-        ratio = distance_wgs84 / distance_px;
-        return ratio;
-    }*/
-
     private LatLng calculateTargetLatLng(LatLng origin, double heading, double angle, double dist) {
         com.google.android.gms.maps.model.LatLng gLatLngLandmark = new
                 com.google.android.gms.maps.model.LatLng(
@@ -490,14 +527,6 @@ public class Landmark {
         return new Coordinate(pointF.x, pointF.y);
     }
 
-    private double calculatePixelDistance(PointF a, PointF b) {
-        double dist;
-        double dx = a.x - b.x;
-        double dy = a.y - b.y;
-        dist = Math.sqrt(dx * dx + dy*dy);
-        return dist;
-    }
-
     private Geometry customIntersectionPoint(LineString ls, Polygon polygon) {
 
         List<LineString> lineStrings = new ArrayList<>();
@@ -516,15 +545,6 @@ public class Landmark {
         }
         return null;
     }
-
-    /**
-    private double screenResolutionRatio(MapboxMap map, VisibleRegion bbox) {
-        double origin_resolution = 208 * 320;
-        double current_resolution = map.getProjection().toScreenLocation(bbox.farRight).x *
-                map.getProjection().toScreenLocation(bbox.nearLeft).y;
-        double ratio = current_resolution / origin_resolution;
-        return ratio;
-    }*/
 
     private double heading(LatLng coord1, LatLng coord2) {
         com.google.android.gms.maps.model.LatLng p1 = new com.google.android.gms.maps.model.LatLng

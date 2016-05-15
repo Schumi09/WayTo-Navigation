@@ -52,4 +52,16 @@ public class Globals {
 
     private Bitmap arrow_bmp;
 
+    public boolean onScreenAnchorsTodo() {
+        return onScreenAnchorsTodo;
+    }
+
+    public void setOnScreenAnchorsTodo(boolean onScreenAnchorsTodo) {
+        this.onScreenAnchorsTodo = onScreenAnchorsTodo;
+    }
+
+    private boolean onScreenAnchorsTodo;
+
+
+
 }
