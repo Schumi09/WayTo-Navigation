@@ -119,20 +119,7 @@ public class Landmark {
                 this.visualization = drawWedge(map, context);
                 break;
             case "1": //Tangible Pointer
-                Globals globals = Globals.getInstance();
 
-                if (globals.getArrow_bmp() == null) {
-                    globals.setArrow_bmp(BitmapFactory.decodeResource(
-                            context.getResources(), R.drawable.arrow));
-                }
-                if (globals.onScreenAnchorsTodo()) {
-                    globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                            Landmark.getBboxPolygonCoordinates(map)));
-                    List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
-                            globals.getOnScreenFrameCoords());
-                    globals.setOnScreenAnchors(onScreenAnchors);
-                    globals.setOnScreenAnchorsTodo(false);
-                }
                 this.visualization = drawTangiblePointer(map, context);
                 break;
         }
@@ -473,6 +460,19 @@ public class Landmark {
     }
 
     public TangiblePointer drawTangiblePointer(MapboxMap map, Context c) {
+        Globals globals = Globals.getInstance();
+
+        if (globals.getArrow_bmp() == null) {
+            globals.setArrow_bmp(BitmapFactory.decodeResource(c.getResources(), R.drawable.arrow));
+        }
+        if (globals.onScreenAnchorsTodo()) {
+            globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
+                    Landmark.getBboxPolygonCoordinates(map)));
+            List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
+                    globals.getOnScreenFrameCoords());
+            globals.setOnScreenAnchors(onScreenAnchors);
+            globals.setOnScreenAnchorsTodo(false);
+        }
         return new TangiblePointer(map, this, c);
     }
 
