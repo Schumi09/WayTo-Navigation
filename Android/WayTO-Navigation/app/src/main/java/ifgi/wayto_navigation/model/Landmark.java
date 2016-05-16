@@ -370,7 +370,6 @@ public class Landmark {
             this.visualization = new ArrayList<>();
             this.landmark = l;
             this.onScreenAnchor = this.landmark.onScreenAnchor(map);
-            setIcon(map);
             setLine(map);
         }
 
@@ -403,9 +402,17 @@ public class Landmark {
             PolylineOptions polylineOptions = new PolylineOptions()
                     .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha / 255);
             ArrowParams params = new ArrowParams(map, p1, heading - map.getCameraPosition().bearing, this);
-            this.visualization.add(map.addPolyline(polylineOptions));
-            new SetArrow().execute(params);
-            //setArrow(map, p1, heading - map.getCameraPosition().bearing);
+            int count = 0;
+            int maxTries = 5;
+            while(this.visualization.size() == 0) {
+                try {
+                    this.visualization.add(map.addPolyline(polylineOptions));
+                    setIcon(map);
+                    new SetArrow().execute(params);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    if (++count == maxTries) throw e;
+                }
+            }
         }
 
         private class ArrowParams {
