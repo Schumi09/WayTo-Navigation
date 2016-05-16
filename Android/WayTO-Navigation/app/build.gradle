@@ -34,7 +34,7 @@ repositories {
 dependencies {
     provided fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    compile('com.mapbox.mapboxsdk:mapbox-android-sdk:4.0.1-SNAPSHOT@aar') {
+    compile('com.mapbox.mapboxsdk:mapbox-android-sdk:4.0.1@aar') {
         transitive = true
     }
     compile('com.mapbox.mapboxsdk:mapbox-android-services:1.0.0@aar') {
