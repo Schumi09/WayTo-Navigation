@@ -120,7 +120,11 @@ public class Landmark {
                 break;
             case "1": //Tangible Pointer
 
-                this.visualization = drawTangiblePointer(map, context);
+                this.visualization = drawTangiblePointer(map, context, false);
+                break;
+            case "2": //Tangible Pointer with Transparency
+
+                this.visualization = drawTangiblePointer(map, context, true);
                 break;
         }
 
@@ -351,12 +355,14 @@ public class Landmark {
         private Landmark landmark;
         private Context context;
         private float alpha;
+        private boolean withStyle;
 
-        public TangiblePointer(MapboxMap map, Landmark l, Context c) {
+        public TangiblePointer(MapboxMap map, Landmark l, Context c, boolean style) {
             this.context = c;
             this.visualization = new ArrayList<>();
             this.landmark = l;
             this.onScreenAnchor = this.landmark.onScreenAnchor(map);
+            this.withStyle = style;
             setLine(map);
         }
 
@@ -381,14 +387,26 @@ public class Landmark {
             LatLng landmark = this.landmark.getLocationLatLng();
             double heading = heading(this.onScreenAnchor, landmark);
             double distance = this.onScreenAnchor.distanceTo(landmark);
-            float width = (float) distance * 1/1000 + 2;
-            this.alpha = (float) ((distance * 1/50 + 30) * 2.5);
-            distance = Math.sqrt(distance) + 25;
-            LatLng p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
-            LatLng p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
-            PolylineOptions polylineOptions = new PolylineOptions()
-                    .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha / 255);
-            ArrowParams params = new ArrowParams(map, p1, heading - map.getCameraPosition().bearing, this);
+            float width;
+            PolylineOptions polylineOptions;
+            LatLng p1;
+            LatLng p2;
+            if (withStyle) {
+                width = (float) distance * 1 / 1000 + 2;
+                this.alpha = (float) ((distance * 1 / 50 + 30) * 2.5);
+                distance = Math.sqrt(distance) + 25;
+                p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
+                p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
+                polylineOptions = new PolylineOptions()
+                        .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha / 255);
+            }else{
+                distance = Math.sqrt(distance) + 25;
+                p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
+                p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
+                polylineOptions = new PolylineOptions()
+                        .add(p1).add(p2).color(Color.parseColor("#000000")).width(4);
+            }
+            ArrowParams params = new ArrowParams(map, p1, heading - map.getCameraPosition().bearing, withStyle, this);
             int count = 0;
             int maxTries = 5;
             while(this.visualization.size() == 0) {
@@ -403,17 +421,19 @@ public class Landmark {
         }
 
         private class ArrowParams {
-            public ArrowParams(MapboxMap map, LatLng l, Double d, TangiblePointer tangiblePointer) {
+            public ArrowParams(MapboxMap map, LatLng l, Double d, boolean withStyle, TangiblePointer tangiblePointer) {
                 this.map = map;
                 this.l = l;
                 this.angle = d;
                 this.tangiblePointer = tangiblePointer;
+                this.withStyle = withStyle;
             }
 
             public MapboxMap map;
             public LatLng l;
             public Double angle;
             public TangiblePointer tangiblePointer;
+            public boolean withStyle;
         }
 
         private class SetArrow extends AsyncTask<ArrowParams, Void, MarkerOptions> {
@@ -426,7 +446,7 @@ public class Landmark {
                 this.tangiblePointer = params[0].tangiblePointer;
                 LatLng l = params[0].l;
                 double angle = params[0].angle;
-                return setArrow(l, angle);
+                return setArrow(l, angle, params[0].withStyle);
             }
 
             protected void onPostExecute(MarkerOptions options) {
@@ -435,7 +455,7 @@ public class Landmark {
         }
 
 
-        private MarkerOptions setArrow(LatLng position, Double angle) {
+        private MarkerOptions setArrow(LatLng position, Double angle, boolean withStyle) {
             Globals globals = Globals.getInstance();
             Bitmap icon_bmp = globals.getArrow_bmp();
             Matrix matrix = new Matrix();
@@ -443,7 +463,9 @@ public class Landmark {
             icon_bmp = Bitmap.createBitmap(icon_bmp, 0, 0, icon_bmp.getWidth(), icon_bmp.getHeight(), matrix, true);
             IconFactory mIconFactory = IconFactory.getInstance(this.context);
             Drawable mIconDrawable = new BitmapDrawable(this.context.getResources(), icon_bmp);
-            mIconDrawable.setAlpha(Math.round(this.alpha));
+            if (withStyle) {
+                mIconDrawable.setAlpha(Math.round(this.alpha));
+            }
             Icon icon = mIconFactory.fromDrawable(mIconDrawable);
             MarkerOptions markerOptions = new MarkerOptions()
                     .position(position).icon(icon);
@@ -459,7 +481,7 @@ public class Landmark {
 
     }
 
-    public TangiblePointer drawTangiblePointer(MapboxMap map, Context c) {
+    private TangiblePointer drawTangiblePointer(MapboxMap map, Context c, boolean style) {
         Globals globals = Globals.getInstance();
 
         if (globals.getArrow_bmp() == null) {
@@ -473,7 +495,7 @@ public class Landmark {
             globals.setOnScreenAnchors(onScreenAnchors);
             globals.setOnScreenAnchorsTodo(false);
         }
-        return new TangiblePointer(map, this, c);
+        return new TangiblePointer(map, this, c, style);
     }
 
 
