@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     private Polyline currentRoutePolyline = null;
 
     private List<Location> simulation_locations;
-    private boolean simulate = true;
+    private boolean simulate;
 
 
     protected static final String TAG = "WayTO-Navigation";
@@ -120,6 +120,8 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     protected SharedPreferences.OnSharedPreferenceChangeListener sharedPrefListener;
 
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
+    public static final String SIMULATION_KEY = "checkbox_simulation";
+
     protected List<Landmark> offscreen_landmarks = new ArrayList<>();
 
     /**
@@ -162,7 +164,7 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-
+        simulate = prefs.getBoolean("checkbox_simulation", true);
         final Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
         myToolbar.setLogo(R.drawable.logo_wayto);
         setSupportActionBar(myToolbar);
@@ -248,6 +250,8 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                             if (currentRoute != null) {
                                 drawRoute(currentRoute);
                             }
+                        }else if(key.equals(SIMULATION_KEY)) {
+
                         }
                     }
                 };

@@ -9,4 +9,6 @@
     <string name="inline_visualization_type">Visualization Type</string>
     <string name="title_visualization_type_preference">Select Visualization</string>
     <string name="dialog_visualization_type_list_preference">Select Visualization</string>
+    <string name="inline_miscellaneous">Miscellaneous</string>
+    <string name="simulate_route">Simulate Route</string>
 </resources>
