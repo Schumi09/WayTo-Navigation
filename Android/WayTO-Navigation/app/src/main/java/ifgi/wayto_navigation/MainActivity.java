@@ -473,8 +473,8 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     }
 
     private void simulate_route() {
+        toggleActionBar(actionBar);
         File file = new File(Environment.getExternalStorageDirectory(), "test.gpx");
-
         GPXParser p = new GPXParser();
         FileInputStream in = null;
         try {
