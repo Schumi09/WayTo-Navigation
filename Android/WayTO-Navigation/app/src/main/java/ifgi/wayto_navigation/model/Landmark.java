@@ -202,15 +202,14 @@ public class Landmark {
             Coordinate intersection_heading_coord = DistanceOp.nearestPoints(bbox_new, landmark_sl)[0];
             LatLng intersection_heading = map.getProjection().fromScreenLocation(
                     new PointF((float)intersection_heading_coord.x, (float)intersection_heading_coord.y));
-            Coordinate[] intersection_coords = DistanceOp.nearestPoints(bbox_px, landmark_sl);
+            //Coordinate[] intersection_coords = DistanceOp.nearestPoints(bbox_px, landmark_sl);
             /**
             Log.d(this.landmark.getName(), landmark_sl +"");
             Log.d(this.landmark.getName(), bbox_px.toString());*/
-            for (int i=0; i<intersection_coords.length; i++) {
-                double d = landmark_sl.distance(new GeometryFactory().createPoint(intersection_coords[i]));
-                //Log.d(this.landmark.getName(), i + " " + d + " " + intersection_coords[i]);
-            }
-            Coordinate intersection_coord = intersection_coords[0];
+            //Coordinate intersection_coord = intersection_coords[0];
+            Coordinate intersection_coord = intersection_heading_coord;
+            //double d = landmark_sl.distance(new GeometryFactory().createPoint(intersection_coord));
+
             LatLng intersection = map.getProjection().fromScreenLocation(
                     new PointF((float)intersection_coord.x, (float)intersection_coord.y));
 
@@ -237,7 +236,7 @@ public class Landmark {
                     //.fillColor(Color.parseColor("#00000000"))
                     .width(1.5f)
                     .color(Color.parseColor("#990000"));
-            this.visualization.add(map.addPolyline(new PolylineOptions().add(landmark.getLocationLatLng()).add(intersection).color(Color.parseColor("#990000"))));
+            //this.visualization.add(map.addPolyline(new PolylineOptions().add(landmark.getLocationLatLng()).add(intersection).color(Color.parseColor("#990000"))));
 
             this.visualization.add(map.addPolyline(polygonOption));
             //com.mapbox.mapboxsdk.annotations.Polygon Polyline = (com.mapbox.mapboxsdk.annotations.Polyline) this.visualization.get(0);
@@ -408,7 +407,8 @@ public class Landmark {
             }
             ArrowParams params = new ArrowParams(map, p1, heading - map.getCameraPosition().bearing, withStyle, this);
             int count = 0;
-            int maxTries = 5;
+            int maxTries = 10;
+            Log.d("Landmark", this.landmark.getName());
             while(this.visualization.size() == 0) {
                 try {
                     this.visualization.add(map.addPolyline(polylineOptions));
