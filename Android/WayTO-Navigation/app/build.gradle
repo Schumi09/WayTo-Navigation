@@ -37,7 +37,7 @@ dependencies {
     compile('com.mapbox.mapboxsdk:mapbox-android-sdk:4.0.1@aar') {
         transitive = true
     }
-    compile('com.mapbox.mapboxsdk:mapbox-android-services:1.0.0@aar') {
+    compile('com.mapbox.mapboxsdk:mapbox-android-services:1.1.0@aar') {
         transitive = true
     }
     compile 'com.google.android.gms:play-services:9.0.0'
