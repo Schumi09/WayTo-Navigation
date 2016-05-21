@@ -1,18 +1,14 @@
 {
   "project_info": {
-    "project_id": "wayto-navigation",
     "project_number": "827947622210",
-    "name": "WayTO-Navigation"
+    "project_id": "wayto-navigation"
   },
   "client": [
     {
       "client_info": {
         "mobilesdk_app_id": "1:827947622210:android:1c414681d860cb50",
-        "client_id": "android:ifgi.wayto_navigation",
-        "client_type": 1,
         "android_client_info": {
-          "package_name": "ifgi.wayto_navigation",
-          "certificate_hash": []
+          "package_name": "ifgi.wayto_navigation"
         }
       },
       "oauth_client": [
@@ -29,21 +25,21 @@
           "client_type": 3
         }
       ],
-      "api_key": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKP3-EBQXFbW3osehj4eCXj051QbHHcYI"
+        }
+      ],
       "services": {
         "analytics_service": {
-          "status": 1
-        },
-        "cloud_messaging_service": {
-          "status": 1,
-          "apns_config": []
+          "status": 2,
+          "analytics_property": {
+            "tracking_id": "UA-75030010-1"
+          }
         },
         "appinvite_service": {
           "status": 1,
           "other_platform_oauth_client": []
-        },
-        "google_signin_service": {
-          "status": 2
         },
         "ads_service": {
           "status": 1
@@ -51,6 +47,5 @@
       }
     }
   ],
-  "client_info": [],
-  "ARTIFACT_VERSION": "1"
+  "configuration_version": "1"
 }

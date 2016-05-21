@@ -148,11 +148,6 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
 
     private SharedPreferences prefs;
     private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -259,10 +254,6 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                 mapView.setKeepScreenOn(true);
             }
         });
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
     }
 
     @Override
