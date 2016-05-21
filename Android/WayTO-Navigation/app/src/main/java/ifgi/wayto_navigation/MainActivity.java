@@ -472,9 +472,63 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
         return mIconFactory.fromDrawable(mIconDrawable);
     }
 
+    /**
+     * Mock gps positions from gpx file called "test.gpx"
+     */
     private void simulate_route() {
         toggleActionBar(actionBar);
-        File file = new File(Environment.getExternalStorageDirectory(), "test.gpx");
+        List<com.hs.gpxparser.modal.Waypoint> waypoints = loadGPX("test");
+        List<Location> locations = new ArrayList<>();
+        for (int i = 0; i < waypoints.size(); i++) {
+            Location mockLocation = new Location("mock");
+            com.hs.gpxparser.modal.Waypoint wp = waypoints.get(i);
+            mockLocation.setLatitude(wp.getLatitude());
+            mockLocation.setLongitude(wp.getLongitude());
+            long time = wp.getTime().getTime();
+            mockLocation.setTime(time);
+            float bearing;
+            if (i != 0) {
+                bearing = locations.get(i - 1).bearingTo(mockLocation);
+                double elapsed_time = (mockLocation.getTime()
+                        - locations.get(i - 1).getTime()) / 1000;
+                double distance = locations.get(i - 1).distanceTo(mockLocation);
+                float speed = (float) ((distance / elapsed_time));
+                mockLocation.setSpeed(speed);
+            } else {
+                bearing = 0;
+            }
+            mockLocation.setBearing(bearing);
+            mockLocation.setAccuracy(1.0f);
+            locations.add(mockLocation);
+        }
+        List<Waypoint> pts = locationsToWaypoints(locations);
+        try {
+            getRoute(pts);
+        } catch (ServicesException e) {
+            e.printStackTrace();
+        }
+        //todo: callback on route to start location mock from here
+        simulation_locations = locations;
+    }
+
+    /**
+     * Reading waypoints from a gpx file (ExternalStorageDirectory/waypoints.gpx) that are used
+     * to request a route from the mapbox API
+     * @return List of Waypoints
+     */
+    private List<Waypoint> getSimulationRouteWaypoints() {
+        List<com.hs.gpxparser.modal.Waypoint> waypoints = loadGPX("waypoints");
+        List<Waypoint> mapbox_wp = new ArrayList<>();
+        for (int i=0; i<waypoints.size(); i++) {
+            com.hs.gpxparser.modal.Waypoint current_wp = waypoints.get(i);
+            mapbox_wp.add(new Waypoint(current_wp.getLongitude(), current_wp.getLatitude()));
+        }
+        return mapbox_wp;
+    }
+
+    private List<com.hs.gpxparser.modal.Waypoint> loadGPX(String filename) {
+        List<com.hs.gpxparser.modal.Waypoint> waypoints = new ArrayList<>();
+        File file = new File(Environment.getExternalStorageDirectory(), filename + ".gpx");
         GPXParser p = new GPXParser();
         FileInputStream in = null;
         try {
@@ -486,7 +540,6 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
             GPX gpx = p.parseGPX(in);
             HashSet<com.hs.gpxparser.modal.Waypoint> wps = gpx.getWaypoints();
             Iterator it = wps.iterator();
-            List<com.hs.gpxparser.modal.Waypoint> waypoints = new ArrayList<>();
             while (it.hasNext()) {
                 waypoints.add((com.hs.gpxparser.modal.Waypoint) it.next());
             }
@@ -497,36 +550,28 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                 }
 
             });
-            List<Location> locations = new ArrayList<>();
-            for (int i = 0; i < waypoints.size(); i++) {
-                Location mockLocation = new Location("mock");
-                com.hs.gpxparser.modal.Waypoint wp = waypoints.get(i);
-                mockLocation.setLatitude(wp.getLatitude());
-                mockLocation.setLongitude(wp.getLongitude());
-                long time = wp.getTime().getTime();
-                mockLocation.setTime(time);
-                float bearing;
-                if (i != 0) {
-                    bearing = locations.get(i - 1).bearingTo(mockLocation);
-                    double elapsed_time = (mockLocation.getTime()
-                            - locations.get(i - 1).getTime()) / 1000;
-                    double distance = locations.get(i - 1).distanceTo(mockLocation);
-                    float speed = (float) ((distance / elapsed_time));
-                    mockLocation.setSpeed(speed);
-                } else {
-                    bearing = 0;
-                }
-                mockLocation.setBearing(bearing);
-                mockLocation.setAccuracy(1.0f);
-                locations.add(mockLocation);
-            }
-            List<Waypoint> pts = locationsToWaypoints(locations);
-            getRoute(pts);
-            simulation_locations = locations;
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return waypoints;
     }
+
+
+    @Deprecated //use getSimulationRouteWaypoints instead
+    private List<Waypoint> locationsToWaypoints(List<Location> locations) {
+        List<com.mapbox.services.directions.v4.models.Waypoint> waypoints = new ArrayList<>();
+        int max_waypoints = 5;
+        int steps = (int) Math.ceil(locations.size() / max_waypoints);
+        Location l;
+        for (int i = 0; waypoints.size() < max_waypoints - 1; i += steps) {
+            l = locations.get(i);
+            waypoints.add(new Waypoint(l.getLongitude(), l.getLatitude()));
+        }
+        l = locations.get(locations.size() - 1);
+        waypoints.add(new Waypoint(l.getLongitude(), l.getLatitude()));
+        return waypoints;
+    }
+
 
     @UiThread
     public void mockLocations(final List<Location> locations) {
@@ -557,19 +602,6 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     private void mock(final Location mockLocation) {
         com.mapzen.android.lost.api.LocationServices.FusedLocationApi.setMockMode(true);
         com.mapzen.android.lost.api.LocationServices.FusedLocationApi.setMockLocation(mockLocation);
-    }
-
-    private List<Waypoint> locationsToWaypoints(List<Location> locations) {
-        List<com.mapbox.services.directions.v4.models.Waypoint> waypoints = new ArrayList<>();
-        int steps = (int) Math.ceil(locations.size() / 25);
-        Location l;
-        for (int i = 0; waypoints.size() < 24; i += steps) {
-            l = locations.get(i);
-            waypoints.add(new Waypoint(l.getLongitude(), l.getLatitude()));
-        }
-        l = locations.get(locations.size() - 1);
-        waypoints.add(new Waypoint(l.getLongitude(), l.getLatitude()));
-        return waypoints;
     }
 
     /**
