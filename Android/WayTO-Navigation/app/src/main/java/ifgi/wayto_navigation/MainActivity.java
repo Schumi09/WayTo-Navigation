@@ -11,6 +11,7 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
@@ -76,7 +77,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLocationChangeListener {
+public class MainActivity extends AppCompatActivity {
 
     /**
      * Global variables
@@ -116,13 +117,11 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     protected double mCurrentBearing = 361;
     protected final int BEARING_THRESHOLD = 30;
     protected String mLastUpdateTime;
-    protected Boolean mRequestingLocationUpdates = true;
     protected SharedPreferences.OnSharedPreferenceChangeListener sharedPrefListener;
 
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
     public static final String SIMULATION_KEY = "checkbox_simulation";
 
-    protected List<Landmark> offscreen_landmarks = new ArrayList<>();
 
     /**
      * Münster route waypoints
@@ -155,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         globals = Globals.getInstance();
-        mCurrentPositionIcon = getIcon(R.drawable.position_marker);
+        mCurrentPositionIcon = getIcon(R.drawable.position);
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -198,9 +197,16 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
             public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
 
-                mMapboxMap.setOnMyLocationChangeListener(MainActivity.this);
+                mMapboxMap.setOnMyLocationChangeListener(new MapboxMap.OnMyLocationChangeListener() {
+                    @Override
+                    public void onMyLocationChange(@Nullable Location location) {
+                        if (location != null) {
+                            onLocationChanged(location);
+                        }
+                    }
+                });
                 LocationServices.getLocationServices(MainActivity.this).toggleGPS(true);
-                mMapboxMap.setMyLocationEnabled(true);
+                mMapboxMap.setMyLocationEnabled(false);
 
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
 
@@ -224,12 +230,13 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                 } catch (ServicesException e) {
                     e.printStackTrace();
                 }
+
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(51.96937, 7.60937))
                         .zoom(12)
                         .build();
 
-                mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                mMapboxMap.setCameraPosition(cameraPosition);
 
                 mMapboxMap.setOnMapLongClickListener(new MapboxMap.OnMapLongClickListener() {
                     @Override
@@ -246,7 +253,7 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                                 drawRoute(currentRoute);
                             }
                         }else if(key.equals(SIMULATION_KEY)) {
-
+                            simulate_route();
                         }
                     }
                 };
@@ -254,13 +261,6 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                 mapView.setKeepScreenOn(true);
             }
         });
-    }
-
-    @Override
-    public void onMyLocationChange(@Nullable Location location) {
-        if (location != null) {
-            onLocationChanged(location);
-        }
     }
 
     private void toggleActionBar(ActionBar actionBar) {
@@ -326,7 +326,7 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                 .tilt(0)
                 .build();
         if (mMapboxMap != null) {
-            mMapboxMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            mMapboxMap.setCameraPosition(cameraPosition);
         }
         landmarkVisualization();
     }
@@ -431,7 +431,7 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     private void moveCurrentPositionMarker(Location location) {
 
         if (mMapboxMap == null) {return;}
-        /**
+
         if (currentPositionMarker != null) {
             currentPositionMarker.setPosition(
                     new LatLng(location.getLatitude(), location.getLongitude()));
@@ -441,9 +441,8 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
                     .icon(mCurrentPositionIcon);
             currentPositionMarker = mMapboxMap.addMarker(options);
         }
-        */
         if (mMapboxMap.getMyLocation() != null) {
-            mMapboxMap.getMyLocation().set(location);
+            //mMapboxMap.getMyLocation().set(location);
         }
     }
 
@@ -459,8 +458,7 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
 
     public Icon getIcon(int id) {
         IconFactory mIconFactory = IconFactory.getInstance(this);
-        Drawable mIconDrawable = ContextCompat.getDrawable(this, id);
-        return mIconFactory.fromDrawable(mIconDrawable);
+        return mIconFactory.fromResource(id);
     }
 
     /**
@@ -564,53 +562,35 @@ public class MainActivity extends AppCompatActivity implements MapboxMap.OnMyLoc
     }
 
 
-    @UiThread
     public void mockLocations(final List<Location> locations) {
-        new Thread(new Runnable() {
-
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.post(new Runnable() {
+            @Override
             public void run() {
-                Looper.prepare();
-                Location previous = locations.get(0);
-                mock(previous);
+                //Looper.prepare();
+                Location first = locations.get(0);
+                mock(first);
                 for (int i = 1; i < locations.size(); i++) {
-                    Location current = locations.get(i);
-                    long diff = current.getTime() - previous.getTime();
-                    try {
-                        Thread.sleep(diff / 2);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    previous = current;
-                    mock(current);
+                    final Location current = locations.get(i);
+                    Runnable runnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            mock(current);
+                        }
+                    };
+                    long diff = current.getTime() - first.getTime();
+                    Handler h = new Handler();
+                    h.postDelayed(runnable, diff);
                 }
-                Looper.loop();
-
+                //Looper.loop();
             }
-        }).start();
+        });
     }
 
 
     private void mock(final Location mockLocation) {
         com.mapzen.android.lost.api.LocationServices.FusedLocationApi.setMockMode(true);
         com.mapzen.android.lost.api.LocationServices.FusedLocationApi.setMockLocation(mockLocation);
-    }
-
-    /**
-     * Requests location updates from the FusedLocationApi.
-     */
-    protected void startLocationUpdates() {
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-        //mMapboxMap.setMyLocationEnabled(true);
     }
 
 
