@@ -1,14 +1,14 @@
 package ifgi.wayto_navigation;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -16,9 +16,7 @@ import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.UiThread;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -38,7 +36,6 @@ import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
-import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.location.LocationServices;
 import com.mapbox.mapboxsdk.maps.MapView;
@@ -148,6 +145,10 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
 
+    private String[] PERMISSIONS;
+    private static int PERMISSION_ALL = 1;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -190,7 +191,21 @@ public class MainActivity extends AppCompatActivity {
         mapView.onCreate(savedInstanceState);
         toggleFullscreen();
         myToolbar.bringToFront();
+        PERMISSIONS = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.INTERNET};
 
+        long time_of_permission_request = System.currentTimeMillis();
+        do {
+            checkPermissions();
+        }
+        while (awaitPermissionRequest(time_of_permission_request));
+        if (!hasPermissions(this.getApplicationContext(), PERMISSIONS)) {
+            moveTaskToBack(true);
+            android.os.Process.killProcess(android.os.Process.myPid());
+            System.exit(1);
+        }
 
         mapView.getMapAsync(new OnMapReadyCallback() {
             @Override
@@ -248,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
                                                           String key) {
                         if (key.equals(VISUALIZATION_TYPE_KEY)) {
-                            mapboxMap.removeAnnotations();
+                            //mapboxMap.removeAnnotations();
                             if (currentRoute != null) {
                                 drawRoute(currentRoute);
                             }
@@ -593,6 +608,40 @@ public class MainActivity extends AppCompatActivity {
         com.mapzen.android.lost.api.LocationServices.FusedLocationApi.setMockLocation(mockLocation);
     }
 
+    /**
+     * http://stackoverflow.com/a/34343101/3083611
+     */
+    private void checkPermissions() {
+
+        if(!hasPermissions(this.getApplicationContext(), PERMISSIONS)){
+            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_ALL);
+        }
+    }
+
+    /**
+     * http://stackoverflow.com/a/34343101/3083611
+     * @param context
+     * @param permissions
+     * @return
+     */
+    public static boolean hasPermissions(Context context, String... permissions) {
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context != null && permissions != null) {
+            for (String permission : permissions) {
+                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean awaitPermissionRequest(long time_of_permission_request) {
+        long time_to_wait = 15;
+        long _time_of_permission_request = time_of_permission_request / (1000);
+        return (System.currentTimeMillis() / (1000) - _time_of_permission_request)
+                < time_to_wait
+                && !hasPermissions(this.getApplicationContext(), PERMISSIONS);
+    }
 
     @Override
     protected void onStart() {
