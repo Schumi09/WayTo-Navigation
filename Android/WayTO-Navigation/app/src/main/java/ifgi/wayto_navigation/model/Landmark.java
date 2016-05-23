@@ -20,6 +20,8 @@ import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.MarkerView;
+import com.mapbox.mapboxsdk.annotations.MarkerViewOptions;
 import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.constants.MathConstants;
@@ -603,7 +605,7 @@ public class Landmark {
     }
 
     public static Coordinate[] onScreenFrame(Coordinate[] coordinates) {
-        double OFFSET = 100;
+        double OFFSET = coordinates[1].x * 0.12; // 12% of display's top max pixel
         Coordinate[] new_coordinates = new Coordinate[5];
         new_coordinates[0] = coordinates[0];
         new_coordinates[0].x += OFFSET;
