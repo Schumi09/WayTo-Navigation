@@ -328,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
 
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
-                .zoom(12)
+                .zoom(15)
                 .bearing(mCurrentBearing)
                 .tilt(0)
                 .build();
