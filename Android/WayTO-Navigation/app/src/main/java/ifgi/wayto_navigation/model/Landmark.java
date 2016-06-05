@@ -70,6 +70,7 @@ public class Landmark {
     private LatLng locationLatLng;
     private PointF locationScreen;
     private Icon off_screen_icon;
+    private Icon on_screen_icon;
     private MarkerOptions on_screen_markerOptions;
     private Visualization visualization;
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
@@ -84,6 +85,10 @@ public class Landmark {
         this.locationLatLng = new LatLng(lat, lon);
         this.on_screen_markerOptions = getOn_screen_markerOptions();
         this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
+        this.on_screen_icon = createOnScreenMarkerIcon(context);
+        this.on_screen_markerOptions = new MarkerOptions()
+                .position(this.getLocationLatLng())
+                .icon(this.on_screen_icon);
     }
 
     public Icon getOff_screen_icon() {
@@ -103,6 +108,19 @@ public class Landmark {
         //layerDrawable.setLayerInsetBottom(1, ImageUtils.dpToPx(context, 3));
 
         return IconFactory.getInstance(context).fromDrawable(layerDrawable.getCurrent());
+    }
+
+    private Icon createOnScreenMarkerIcon(Context context) {
+        LayerDrawable layerDrawable = new LayerDrawable(new Drawable[0]);
+        layerDrawable.addLayer(context.getDrawable(R.drawable.landmark_on_screen));
+        layerDrawable.addLayer(context.getDrawable(ImageUtils.getIconID(this.name, context)));
+        int icon_layer_index = layerDrawable.getNumberOfLayers() - 1;
+        layerDrawable.setLayerGravity(icon_layer_index, Gravity.CENTER);
+        layerDrawable.setLayerInsetBottom(icon_layer_index, ImageUtils.dpToPx(context, 10));
+        layerDrawable.setLayerHeight(icon_layer_index, ImageUtils.dpToPx(context, 20));
+        layerDrawable.setLayerWidth(icon_layer_index, ImageUtils.dpToPx(context, 20));
+        Drawable drawable = layerDrawable.getCurrent();
+        return IconFactory.getInstance(context).fromDrawable(drawable);
     }
 
     public String getDescription() {
@@ -162,9 +180,9 @@ public class Landmark {
 
         List<Annotation> visualization;
 
-        public onScreen(MapboxMap mapboxMap) {
+        public onScreen(MapboxMap mapboxMap, Landmark landmark) {
             this.visualization = new ArrayList<>();
-            this.visualization.add(mapboxMap.addMarker(getOn_screen_markerOptions()));
+            this.visualization.add(mapboxMap.addMarker(landmark.getOn_screen_markerOptions()));
         }
 
         @Override
@@ -179,7 +197,7 @@ public class Landmark {
     }
 
     public onScreen drawOnScreenMarker(MapboxMap map) {
-        return new onScreen(map);
+        return new onScreen(map, this);
     }
 
     public class Wedge extends Visualization{
@@ -554,9 +572,7 @@ public class Landmark {
 
 
     private MarkerOptions getOn_screen_markerOptions() {
-            return new MarkerOptions()
-                    .position(
-                            new LatLng(this.location.getLatitude(), this.location.getLongitude()));
+            return this.on_screen_markerOptions;
     }
 
     private LatLng calculateTargetLatLng(LatLng origin, double heading, double angle, double dist) {
