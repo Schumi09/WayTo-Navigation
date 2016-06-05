@@ -126,15 +126,7 @@ public class MainActivity extends AppCompatActivity {
     protected Waypoint origin = new Waypoint(7.61964, 51.95324);
     protected Waypoint destination = new Waypoint(7.62478, 51.96547);
 
-    /**
-     * Münster Landmarks
-     */
-    protected Landmark dome = new Landmark("dome", 7.625776, 51.962999);
-    protected Landmark train_station = new Landmark("station", 7.634615, 51.956593);
-    protected Landmark buddenturm = new Landmark("buddenturm", 7.623099, 51.966311);
-    protected Landmark kapuzinerkloster = new Landmark("kapuzinerkloster", 7.606970, 51.970665);
-    protected Landmark castle = new Landmark("castle", 7.613166, 51.963613);
-    protected Landmark zoo = new Landmark("zoo", 7.586884, 51.948622);
+
     protected List<Landmark> landmarks = new ArrayList<Landmark>();
 
     protected DirectionsRoute currentRoute = null;
@@ -155,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         globals = Globals.getInstance();
-        mCurrentPositionIcon = getIcon(R.drawable.position);
+        mCurrentPositionIcon = ImageUtils.getIcon(R.drawable.position, this);
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -173,6 +165,16 @@ public class MainActivity extends AppCompatActivity {
         getBaseContext().getResources().updateConfiguration(config,
                 getBaseContext().getResources().getDisplayMetrics());
 
+        /**
+         * Münster Landmarks
+         */
+        Landmark dome = new Landmark("dome", 7.625776, 51.962999, this);
+        Landmark train_station = new Landmark("station", 7.634615, 51.956593, this);
+        Landmark buddenturm = new Landmark("buddenturm", 7.623099, 51.966311, this);
+        Landmark kapuzinerkloster = new Landmark("kapuzinerkloster", 7.606970, 51.970665,this);
+        Landmark castle = new Landmark("castle", 7.613166, 51.963613, this);
+        Landmark zoo = new Landmark("zoo", 7.586884, 51.948622, this);
+
         landmarks.add(dome);
         landmarks.add(buddenturm);
         landmarks.add(kapuzinerkloster);
@@ -180,7 +182,6 @@ public class MainActivity extends AppCompatActivity {
         landmarks.add(train_station);
         landmarks.add(zoo);
 
-        setIcons();
         final ArrayList<Waypoint> positions = new ArrayList<>();
         positions.add(origin);
         positions.add(destination);
@@ -290,15 +291,6 @@ public class MainActivity extends AppCompatActivity {
         WindowManager.LayoutParams attrs = getWindow().getAttributes();
         attrs.flags ^= WindowManager.LayoutParams.FLAG_FULLSCREEN;
         getWindow().setAttributes(attrs);
-    }
-
-
-    private void setIcons() {
-        int i;
-        for (i = 0; i < landmarks.size(); i++) {
-            String name = landmarks.get(i).getName();
-            landmarks.get(i).setOff_screen_icon(getIcon(getIconID(name)));
-        }
     }
 
     /**
@@ -461,20 +453,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    private int getIconID(String name) {
-        try {
-            return getResources().getIdentifier(name, "drawable", getApplicationContext().getPackageName());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return -1;
-        }
-    }
-
-    public Icon getIcon(int id) {
-        IconFactory mIconFactory = IconFactory.getInstance(this);
-        return mIconFactory.fromResource(id);
-    }
 
     /**
      * Mock gps positions from gpx file called "test.gpx"

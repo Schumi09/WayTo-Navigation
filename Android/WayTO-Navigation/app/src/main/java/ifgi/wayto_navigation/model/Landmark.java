@@ -1,5 +1,6 @@
 package ifgi.wayto_navigation.model;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -9,22 +10,31 @@ import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
-import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.MarkerView;
+import com.mapbox.mapboxsdk.annotations.MarkerViewManager;
 import com.mapbox.mapboxsdk.annotations.MarkerViewOptions;
-import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
-import com.mapbox.mapboxsdk.constants.MathConstants;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
@@ -44,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import ifgi.wayto_navigation.ImageUtils;
 import ifgi.wayto_navigation.R;
 
 
@@ -63,20 +74,7 @@ public class Landmark {
     private Visualization visualization;
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
 
-
-    public Icon getOff_screen_icon() {
-        return off_screen_icon;
-    }
-
-    public void setOff_screen_icon(Icon off_screen_icon) {
-        this.off_screen_icon = off_screen_icon;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public Landmark(String lname, double lon, double lat) {
+    public Landmark(String lname, double lon, double lat, Context context) {
         this.name = lname;
         this.location = new Location("Landmark");
         this.location.setLatitude(lat);
@@ -85,7 +83,32 @@ public class Landmark {
                 PrecisionModel.FLOATING), 4326).createPoint(new Coordinate(lat, lon));
         this.locationLatLng = new LatLng(lat, lon);
         this.on_screen_markerOptions = getOn_screen_markerOptions();
+        this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
     }
+
+    public Icon getOff_screen_icon() {
+        return off_screen_icon;
+    }
+
+    private void setOff_screen_icon(Icon off_screen_icon) {
+        this.off_screen_icon = off_screen_icon;
+    }
+
+    public Icon setBasicOffScreenMarkerIcon(Context context) {
+        Drawable drawable_background = context.getDrawable(R.drawable.landmark_off_screen);
+        LayerDrawable layerDrawable = new LayerDrawable(new Drawable[0]);
+        layerDrawable.addLayer(drawable_background);
+        layerDrawable.addLayer(context.getDrawable(ImageUtils.getIconID(this.name, context)));
+        layerDrawable.setLayerGravity(1, Gravity.CENTER);
+        //layerDrawable.setLayerInsetBottom(1, ImageUtils.dpToPx(context, 3));
+
+        return IconFactory.getInstance(context).fromDrawable(layerDrawable.getCurrent());
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
 
     public String getName() {
         return name;
@@ -99,15 +122,18 @@ public class Landmark {
         return locationLatLng;
     }
 
+    public void removeVisualization(MapboxMap map) {
+        if (this.visualization != null) {
+            map.removeAnnotations(this.visualization.getVisualization());
+        }
+    }
 
     public void visualize(MapboxMap map, Context context) {
 
-        if (this.visualization != null) {
-           this.removeVisualization(map);
-        }
-
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
         String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
+
+        removeVisualization(map);
 
         if (!this.isOffScreen(map)) {
             style = "-1";
@@ -130,11 +156,6 @@ public class Landmark {
                 break;
         }
 
-    }
-
-
-    public void removeVisualization(MapboxMap map) {
-        map.removeAnnotations(this.visualization.getVisualization());
     }
 
     private class onScreen extends Visualization {
