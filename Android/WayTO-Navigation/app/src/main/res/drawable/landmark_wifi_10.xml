@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="45dp"/>
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="70dp"/>
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="95dp"
+        />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="120dp" />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="145dp" />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="170dp" />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="195dp" />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="220dp" />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="245dp" />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="270dp" />
+</layer-list>

@@ -130,6 +130,10 @@ public class Landmark {
         }
     }
 
+    private WiFiPointer drawWiFiPointer(MapboxMap map, Context context) {
+        return new WiFiPointer(map, this, context);
+    }
+
     public void visualize(MapboxMap map, Context context) {
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
@@ -156,6 +160,9 @@ public class Landmark {
 
                 this.visualization = drawTangiblePointer(map, context, true);
                 break;
+            case "3": //Wi-Fi Pointer
+
+                this.visualization = drawWiFiPointer(map, context);
         }
 
     }
@@ -467,6 +474,10 @@ public class Landmark {
     }
 
     private TangiblePointer drawTangiblePointer(MapboxMap map, Context c, boolean style) {
+        return new TangiblePointer(map, this, c, style);
+    }
+
+    public static void initOnScreenAnchors(MapboxMap map) {
         Globals globals = Globals.getInstance();
         if (globals.onScreenAnchorsTodo()) {
             globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
@@ -476,10 +487,7 @@ public class Landmark {
             globals.setOnScreenAnchors(onScreenAnchors);
             globals.setOnScreenAnchorsTodo(false);
         }
-        return new TangiblePointer(map, this, c, style);
     }
-
-
 
     /**
      * Calculating a map position to represent the off-screen position
@@ -488,6 +496,7 @@ public class Landmark {
      */
     public LatLng onScreenAnchor(MapboxMap map) {
         Globals globals = Globals.getInstance();
+        Landmark.initOnScreenAnchors(map);
         Projection proj = map.getProjection();
         LatLng userPosition = map.getCameraPosition().target;
         Coordinate[] connection_coordinates = new Coordinate[2];
@@ -554,7 +563,14 @@ public class Landmark {
         return null;
     }
 
-    private double heading(LatLng coord1, LatLng coord2) {
+    /**
+     * Calculates the heading from one coordinate to another
+     * Todo: replace with own implementation
+     * @param coord1
+     * @param coord2
+     * @return
+     */
+    public double heading(LatLng coord1, LatLng coord2) {
         com.google.android.gms.maps.model.LatLng p1 = new com.google.android.gms.maps.model.LatLng
                 (coord1.getLatitude(), coord1.getLongitude());
         com.google.android.gms.maps.model.LatLng p2 = new com.google.android.gms.maps.model.LatLng

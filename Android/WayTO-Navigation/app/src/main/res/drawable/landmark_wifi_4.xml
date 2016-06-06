@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="45dp"/>
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="70dp"/>
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="95dp"
+        />
+    <item android:drawable="@drawable/upwards_arrow"
+        android:gravity="center"
+        android:bottom="120dp" />
+</layer-list>
