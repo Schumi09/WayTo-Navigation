@@ -3,6 +3,7 @@ package ifgi.wayto_navigation.model;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import com.mapbox.mapboxsdk.annotations.Icon;
 import com.vividsolutions.jts.geom.Coordinate;
 
 import java.util.List;
@@ -63,5 +64,13 @@ public class Globals {
     private boolean onScreenAnchorsTodo;
 
 
+    public Icon getArrow_icon() {
+        return arrow_icon;
+    }
 
+    public void setArrow_icon(Icon arrow_icon) {
+        this.arrow_icon = arrow_icon;
+    }
+
+    private Icon arrow_icon;
 }

@@ -1,30 +1,15 @@
 package ifgi.wayto_navigation.model;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.PointF;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.location.Location;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.UiThread;
 import android.util.Log;
 import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Annotation;
@@ -32,7 +17,6 @@ import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.MarkerView;
-import com.mapbox.mapboxsdk.annotations.MarkerViewManager;
 import com.mapbox.mapboxsdk.annotations.MarkerViewOptions;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -425,7 +409,7 @@ public class Landmark {
 
         private void setLine(MapboxMap map) {
             LatLng landmark = this.landmark.getLocationLatLng();
-            double heading = heading(this.onScreenAnchor, landmark);
+            float heading = (float) heading(this.onScreenAnchor, landmark);
             double distance = this.onScreenAnchor.distanceTo(landmark);
             float width;
             PolylineOptions polylineOptions;
@@ -433,12 +417,12 @@ public class Landmark {
             LatLng p2;
             if (withStyle) {
                 width = (float) distance * 1 / 1000 + 2;
-                this.alpha = (float) ((distance * 1 / 50 + 30) * 2.5);
+                this.alpha = (float) ((distance * 1 / 50 + 30) * 2.5) / 255;
                 distance = Math.sqrt(distance) + 25;
                 p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
                 p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
                 polylineOptions = new PolylineOptions()
-                        .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha / 255);
+                        .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha);
             }else{
                 distance = Math.sqrt(distance) + 25;
                 p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
@@ -446,7 +430,7 @@ public class Landmark {
                 polylineOptions = new PolylineOptions()
                         .add(p1).add(p2).color(Color.parseColor("#000000")).width(4);
             }
-            ArrowParams params = new ArrowParams(map, p1, heading - map.getCameraPosition().bearing, withStyle, this);
+
             int count = 0;
             int maxTries = 10;
             Log.d("Landmark", this.landmark.getName());
@@ -454,80 +438,36 @@ public class Landmark {
                 try {
                     this.visualization.add(map.addPolyline(polylineOptions));
                     setIcon(map);
-                    new SetArrow().execute(params);
+                    setArrow(p1, map, heading, withStyle);
                 } catch (ArrayIndexOutOfBoundsException e) {
                     if (++count == maxTries) throw e;
                 }
             }
         }
 
-        private class ArrowParams {
-            public ArrowParams(MapboxMap map, LatLng l, Double d, boolean withStyle, TangiblePointer tangiblePointer) {
-                this.map = map;
-                this.l = l;
-                this.angle = d;
-                this.tangiblePointer = tangiblePointer;
-                this.withStyle = withStyle;
-            }
-
-            public MapboxMap map;
-            public LatLng l;
-            public Double angle;
-            public TangiblePointer tangiblePointer;
-            public boolean withStyle;
-        }
-
-        private class SetArrow extends AsyncTask<ArrowParams, Void, MarkerOptions> {
-            MapboxMap map;
-            TangiblePointer tangiblePointer;
-
-            @Override
-            protected MarkerOptions doInBackground(ArrowParams... params) {
-                this.map = params[0].map;
-                this.tangiblePointer = params[0].tangiblePointer;
-                LatLng l = params[0].l;
-                double angle = params[0].angle;
-                return setArrow(l, angle, params[0].withStyle);
-            }
-
-            protected void onPostExecute(MarkerOptions options) {
-                this.tangiblePointer.visualization.add(map.addMarker(options));
-            }
-        }
-
-
-        private MarkerOptions setArrow(LatLng position, Double angle, boolean withStyle) {
+        private void setArrow(LatLng position, MapboxMap map, float angle, boolean withStyle) {
             Globals globals = Globals.getInstance();
-            Bitmap icon_bmp = globals.getArrow_bmp();
-            Matrix matrix = new Matrix();
-            matrix.postRotate(angle.floatValue());
-            icon_bmp = Bitmap.createBitmap(icon_bmp, 0, 0, icon_bmp.getWidth(), icon_bmp.getHeight(), matrix, true);
-            IconFactory mIconFactory = IconFactory.getInstance(this.context);
-            Drawable mIconDrawable = new BitmapDrawable(this.context.getResources(), icon_bmp);
+            MarkerViewOptions markerViewOptions = new MarkerViewOptions();
+            angle = (float) (angle - map.getCameraPosition().bearing);
+            if (globals.getArrow_icon() == null) {
+                globals.setArrow_icon(IconFactory.getInstance(this.context)
+                        .fromResource(R.drawable.arrow_black));
+            }
+            markerViewOptions.icon(globals.getArrow_icon());
+            markerViewOptions.position(position);
+            markerViewOptions.rotation((int) angle); //todo remove int cast tomorrow
+            markerViewOptions.anchor(0.5f, 0.5f);
+            MarkerView markerView = map.addMarker(markerViewOptions);
+            //markerView.setRotation(angle);
             if (withStyle) {
-                mIconDrawable.setAlpha(Math.round(this.alpha));
+                markerView.setAlpha(alpha);
             }
-            Icon icon = mIconFactory.fromDrawable(mIconDrawable);
-            MarkerOptions markerOptions = new MarkerOptions()
-                    .position(position).icon(icon);
-
-            if (icon_bmp != null) {
-                icon_bmp.recycle();
-                icon_bmp = null;
-            }
-            mIconDrawable = null;
-            icon = null;
-            return markerOptions;
+            this.visualization.add(map.addMarker(markerViewOptions));
         }
-
     }
 
     private TangiblePointer drawTangiblePointer(MapboxMap map, Context c, boolean style) {
         Globals globals = Globals.getInstance();
-
-        if (globals.getArrow_bmp() == null) {
-            globals.setArrow_bmp(BitmapFactory.decodeResource(c.getResources(), R.drawable.arrow));
-        }
         if (globals.onScreenAnchorsTodo()) {
             globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
                     Landmark.getBboxPolygonCoordinates(map)));
