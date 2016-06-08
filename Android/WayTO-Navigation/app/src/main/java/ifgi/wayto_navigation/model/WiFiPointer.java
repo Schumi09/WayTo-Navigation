@@ -50,7 +50,8 @@ public class WiFiPointer extends Visualization{
 
     private void setVisualization(MapboxMap map) {
         float angle = (float) this.landmark.heading(
-                this.onScreenAnchor, this.landmark.getLocationLatLng());;
+                this.onScreenAnchor, this.landmark.getLocationLatLng());
+        angle = (float) (angle - map.getCameraPosition().bearing);
         double distance = this.landmark.getLocationLatLng().distanceTo(this.onScreenAnchor);
         int arrow_number = (int) (distance / this.step);
         arrow_number++;
