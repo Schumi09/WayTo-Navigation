@@ -650,7 +650,7 @@ public class Landmark {
         List<OnScreenAnchor> anchors = new ArrayList<>();
 
         double long_dist = coordinates[1].x - coordinates[0].x;
-        double space = 35;
+        double space = 90; //px
         int long_number = (int) Math.ceil(long_dist / space);
         double short_dist = coordinates[2].y - coordinates[1].y;
         int short_number = (int) Math.ceil(short_dist / space);
