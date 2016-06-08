@@ -55,7 +55,7 @@ public class Landmark {
     private PointF locationScreen;
     private Icon off_screen_icon;
     private Icon on_screen_icon;
-    private MarkerOptions on_screen_markerOptions;
+    private MarkerViewOptions on_screen_markerOptions;
     private Visualization visualization;
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
 
@@ -67,12 +67,12 @@ public class Landmark {
         this.locationJTS = new GeometryFactory(new PrecisionModel(
                 PrecisionModel.FLOATING), 4326).createPoint(new Coordinate(lat, lon));
         this.locationLatLng = new LatLng(lat, lon);
-        this.on_screen_markerOptions = getOn_screen_markerOptions();
         this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
         this.on_screen_icon = createOnScreenMarkerIcon(context);
-        this.on_screen_markerOptions = new MarkerOptions()
+        this.on_screen_markerOptions = new MarkerViewOptions()
                 .position(this.getLocationLatLng())
-                .icon(this.on_screen_icon);
+                .icon(this.on_screen_icon)
+                .anchor(0.5f, 0);
     }
 
     public Icon getOff_screen_icon() {
@@ -136,6 +136,7 @@ public class Landmark {
 
     public void visualize(MapboxMap map, Context context) {
 
+        Log.d("Landmark Name", this.getName());
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
         String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
 
@@ -440,7 +441,6 @@ public class Landmark {
 
             int count = 0;
             int maxTries = 10;
-            Log.d("Landmark", this.landmark.getName());
             while(this.visualization.size() == 0) {
                 try {
                     this.visualization.add(map.addPolyline(polylineOptions));
@@ -469,7 +469,7 @@ public class Landmark {
             if (withStyle) {
                 markerView.setAlpha(alpha);
             }
-            this.visualization.add(map.addMarker(markerViewOptions));
+            this.visualization.add(markerView);
         }
     }
 
@@ -520,7 +520,7 @@ public class Landmark {
     }
 
 
-    private MarkerOptions getOn_screen_markerOptions() {
+    private MarkerViewOptions getOn_screen_markerOptions() {
             return this.on_screen_markerOptions;
     }
 
