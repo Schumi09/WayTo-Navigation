@@ -72,7 +72,7 @@ public class Landmark {
         this.on_screen_markerOptions = new MarkerViewOptions()
                 .position(this.getLocationLatLng())
                 .icon(this.on_screen_icon)
-                .anchor(0.5f, 0);
+                .anchor(0.5f, 1);
     }
 
     public Icon getOff_screen_icon() {
