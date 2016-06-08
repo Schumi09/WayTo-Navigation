@@ -69,7 +69,7 @@ public class WiFiPointer extends Visualization{
         MarkerView markerView;
         MarkerViewOptions markerViewOptions = new MarkerViewOptions();
         markerViewOptions.icon(icon);
-        markerViewOptions.rotation((int) angle); //todo: float tomorrow
+        markerViewOptions.rotation(angle);
         markerViewOptions.position(onScreenAnchor);
         markerViewOptions.anchor(0.5f, 0.5f); //center
         markerViewOptions.flat(true);
