@@ -36,6 +36,8 @@ import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
+import com.mapbox.mapboxsdk.constants.MyBearingTracking;
+import com.mapbox.mapboxsdk.constants.MyLocationTracking;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.location.LocationServices;
 import com.mapbox.mapboxsdk.maps.MapView;
@@ -222,13 +224,14 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
                 LocationServices.getLocationServices(MainActivity.this).toggleGPS(true);
-                mMapboxMap.setMyLocationEnabled(false);
+                mMapboxMap.setMyLocationEnabled(true);
+                mMapboxMap.getTrackingSettings().setMyLocationTrackingMode(MyLocationTracking.TRACKING_FOLLOW);
+                mMapboxMap.getTrackingSettings().setMyBearingTrackingMode(MyBearingTracking.GPS);
 
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
-
                     @Override
                     public void onCameraChange(CameraPosition position) {
-
+                        landmarkVisualization();
                     }
                 });
                 //startLocationUpdates();
@@ -248,8 +251,8 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 CameraPosition cameraPosition = new CameraPosition.Builder()
-                        .target(new LatLng(51.96937, 7.60937))
-                        .zoom(12)
+                        .target(new LatLng(51.953780194, 7.619926209))
+                        .zoom(15)
                         .build();
 
                 mMapboxMap.setCameraPosition(cameraPosition);
@@ -317,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (currentJtsRouteLs != null) {
             mCurrentLocationSnap = snapLocation(mCurrentLocation);
-            moveCurrentPositionMarker(mCurrentLocationSnap);
+            //moveCurrentPositionMarker(mCurrentLocationSnap);
         }
 
         if (location.hasSpeed() && location.getSpeed() > 2) {
@@ -325,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
                 mCurrentBearing = mCurrentLocation.getBearing();
             }
         }
-
+        /**
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()))
                 .zoom(15)
@@ -334,8 +337,8 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         if (mMapboxMap != null) {
             mMapboxMap.setCameraPosition(cameraPosition);
-        }
-        landmarkVisualization();
+        }*/
+        //landmarkVisualization();
     }
 
     private void landmarkVisualization() {
@@ -374,7 +377,13 @@ public class MainActivity extends AppCompatActivity {
                     currentRoute = response.body().getRoutes().get(0);
                     drawRoute(currentRoute);
                     if(simulate) {
-                        mockLocations(simulation_locations);
+                        Handler handler = new Handler();
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                mockLocations(simulation_locations);
+                            }
+                        }, 3000);
                     }
                     Log.d(TAG, "Distance: " + currentRoute.getDistance());
                 }
@@ -562,9 +571,14 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 //Looper.prepare();
                 Location first = locations.get(0);
+                final Location previous;
                 mock(first);
+                previous = first;
                 for (int i = 1; i < locations.size(); i++) {
                     final Location current = locations.get(i);
+                    if (current.getSpeed() < 2 && previous.getSpeed() < 2) {
+                        continue;
+                    }
                     Runnable runnable = new Runnable() {
                         @Override
                         public void run() {
