@@ -170,12 +170,12 @@ public class MainActivity extends AppCompatActivity {
         /**
          * Münster Landmarks
          */
-        Landmark dome = new Landmark("dome", 7.625776, 51.962999, false, this);
-        Landmark train_station = new Landmark("station", 7.634615, 51.956593, false, this);
-        Landmark buddenturm = new Landmark("buddenturm", 7.623099, 51.966311, true, this);
-        Landmark kapuzinerkloster = new Landmark("kapuzinerkloster", 7.606970, 51.970665, true, this);
-        Landmark castle = new Landmark("castle", 7.613166, 51.963613, false, this);
-        Landmark zoo = new Landmark("zoo", 7.586884, 51.948622, true, this);
+        Landmark dome = new Landmark("dome", 7.625776, 51.962999, false, 0, this);
+        Landmark train_station = new Landmark("station", 7.634615, 51.956593, false, 0, this);
+        Landmark buddenturm = new Landmark("buddenturm", 7.623099, 51.966311, false, 750, this);
+        Landmark kapuzinerkloster = new Landmark("kapuzinerkloster", 7.606970, 51.970665, true, 0, this);
+        Landmark castle = new Landmark("castle", 7.613166, 51.963613, false, 0, this);
+        Landmark zoo = new Landmark("zoo", 7.586884, 51.948622, false, 1800, this);
 
         landmarks.add(dome);
         landmarks.add(buddenturm);

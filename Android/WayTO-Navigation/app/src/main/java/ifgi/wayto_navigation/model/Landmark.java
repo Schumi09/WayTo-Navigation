@@ -58,12 +58,15 @@ public class Landmark {
     private MarkerViewOptions on_screen_markerOptions;
     private Visualization visualization;
 
-
-
     private boolean isOnScreenOnly;
+    private double rangeToVisualize;
+
+
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
 
-    public Landmark(String lname, double lon, double lat, boolean isOnScreenOnly, Context context) {
+    public Landmark(String lname, double lon, double lat, boolean isOnScreenOnly
+            , double range, Context context) {
+
         this.name = lname;
         this.location = new Location("Landmark");
         this.location.setLatitude(lat);
@@ -72,7 +75,10 @@ public class Landmark {
                 PrecisionModel.FLOATING), 4326).createPoint(new Coordinate(lat, lon));
         this.locationLatLng = new LatLng(lat, lon);
         this.isOnScreenOnly = isOnScreenOnly;
-        this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
+        if (!isOnScreenOnly) {
+            this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
+        }
+        this.rangeToVisualize = range;
         this.on_screen_icon = createOnScreenMarkerIcon(context);
         this.on_screen_markerOptions = new MarkerViewOptions()
                 .position(this.getLocationLatLng())
@@ -162,7 +168,10 @@ public class Landmark {
             this.visualization = drawOnScreenMarker(map);
         }
 
-        if ((!this.isOnScreenOnly()) && isOffScreen) {
+        boolean toVisualize = ((map.getCameraPosition().target.distanceTo(this.getLocationLatLng()))
+                <= this.rangeToVisualize) || this.rangeToVisualize == 0;
+
+        if ((!this.isOnScreenOnly()) && isOffScreen && toVisualize) {
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
             String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
 
