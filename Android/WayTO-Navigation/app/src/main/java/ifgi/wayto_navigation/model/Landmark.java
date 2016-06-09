@@ -153,35 +153,35 @@ public class Landmark {
     public void visualize(MapboxMap map, Context context) {
 
         Log.d("Landmark Name", this.getName());
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
-        String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
 
         removeVisualization(map);
 
-        if (!this.isOffScreen(map)) {
-            Log.d("isOnScreen", "true");
+        boolean isOffScreen = this.isOffScreen(map);
+
+        if (!isOffScreen) {
             this.visualization = drawOnScreenMarker(map);
         }
 
-        if (isOnScreenOnly) {
-            return;
-        }
+        if ((!this.isOnScreenOnly()) && isOffScreen) {
+            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+            String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
 
-        switch(style) {
-            case "0": //Wedges
-                this.visualization = drawWedge(map, context);
-                break;
-            case "1": //Tangible Pointer
+            switch(style) {
+                case "0": //Wedges
+                    this.visualization = drawWedge(map, context);
+                    break;
+                case "1": //Tangible Pointer
 
-                this.visualization = drawTangiblePointer(map, context, false);
-                break;
-            case "2": //Tangible Pointer with Transparency
+                    this.visualization = drawTangiblePointer(map, context, false);
+                    break;
+                case "2": //Tangible Pointer with Transparency
 
-                this.visualization = drawTangiblePointer(map, context, true);
-                break;
-            case "3": //Wi-Fi Pointer
+                    this.visualization = drawTangiblePointer(map, context, true);
+                    break;
+                case "3": //Wi-Fi Pointer
 
-                this.visualization = drawWiFiPointer(map, context);
+                    this.visualization = drawWiFiPointer(map, context);
+            }
         }
 
     }
@@ -523,7 +523,7 @@ public class Landmark {
         LineString connection = new GeometryFactory().createLineString(connection_coordinates);
         Coordinate[] onScreenFrameCoords = globals.getOnScreenFrameCoords();
         Polygon onScreenAnchorPolygon = new GeometryFactory().createPolygon(onScreenFrameCoords);
-        //Log.d("Anchors", onScreenAnchors(onScreenFrameCoords).toString());
+        Log.d("Anchors", onScreenAnchors(onScreenFrameCoords).toString());
         Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon)
                 .getCoordinate();
         int anchor_position = getOnScreenAnchorPosition(intersection);
