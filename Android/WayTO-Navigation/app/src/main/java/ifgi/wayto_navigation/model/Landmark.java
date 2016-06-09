@@ -462,7 +462,7 @@ public class Landmark {
             }
             markerViewOptions.icon(globals.getArrow_icon());
             markerViewOptions.position(position);
-            markerViewOptions.rotation((int) angle); //todo remove int cast tomorrow
+            markerViewOptions.rotation(angle);
             markerViewOptions.anchor(0.5f, 0.5f);
             MarkerView markerView = map.addMarker(markerViewOptions);
             //markerView.setRotation(angle);
