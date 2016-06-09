@@ -57,9 +57,13 @@ public class Landmark {
     private Icon on_screen_icon;
     private MarkerViewOptions on_screen_markerOptions;
     private Visualization visualization;
+
+
+
+    private boolean isOnScreenOnly;
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
 
-    public Landmark(String lname, double lon, double lat, Context context) {
+    public Landmark(String lname, double lon, double lat, boolean isOnScreenOnly, Context context) {
         this.name = lname;
         this.location = new Location("Landmark");
         this.location.setLatitude(lat);
@@ -67,6 +71,7 @@ public class Landmark {
         this.locationJTS = new GeometryFactory(new PrecisionModel(
                 PrecisionModel.FLOATING), 4326).createPoint(new Coordinate(lat, lon));
         this.locationLatLng = new LatLng(lat, lon);
+        this.isOnScreenOnly = isOnScreenOnly;
         this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
         this.on_screen_icon = createOnScreenMarkerIcon(context);
         this.on_screen_markerOptions = new MarkerViewOptions()
@@ -81,6 +86,17 @@ public class Landmark {
 
     private void setOff_screen_icon(Icon off_screen_icon) {
         this.off_screen_icon = off_screen_icon;
+    }
+
+    public boolean isOnScreenOnly() {
+        return isOnScreenOnly;
+    }
+
+    public void setOnScreenOnly(boolean onScreenOnly, Context context) {
+        isOnScreenOnly = onScreenOnly;
+        if (isOnScreenOnly) {
+            this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
+        }
     }
 
     public Icon setBasicOffScreenMarkerIcon(Context context) {
@@ -143,13 +159,15 @@ public class Landmark {
         removeVisualization(map);
 
         if (!this.isOffScreen(map)) {
-            style = "-1";
+            Log.d("isOnScreen", "true");
+            this.visualization = drawOnScreenMarker(map);
+        }
+
+        if (isOnScreenOnly) {
+            return;
         }
 
         switch(style) {
-            case "-1":
-                this.visualization = drawOnScreenMarker(map);
-                break;
             case "0": //Wedges
                 this.visualization = drawWedge(map, context);
                 break;
