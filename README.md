@@ -1,7 +1,10 @@
 # WayTO-Navigation
-## Project for Master's Thesis
-
-Visualization of off-screen landmarks for car navigation systems (Android devices)
+## Developing and Testing diﬀerent Visualizations of Oﬀ-Screen Landmarks for Car Navigation Systems
+### Project for Master's Thesis
+Along with the increasing proliferation and power of mobile devices, mobile maps (e.g. in pedestrian navigation systems) become both feasible and popular [Allen, 2000]. In contrast to the navigation mode in car navigation systems, pedestrians prefer route instructions based on salient objects [Kluge and Asche, 2012]. Although it is easy for users to get guided to a location, research suggests that the effects are negative. Moreover, users become device-focused and develop a reduced understanding of the environment [Munzer et al., 2006]. Accordingly, users might get lost in cases of inaccurate instructions or failures of the system as they only focus on the given route and turning-point instructions. Consequently, studies suggest that wayfinding and learning of the environment can be influenced through visual presentation modes with mobile applications [Munzer et al., 2012]. One type of information that are mostly not considered in mobile navigation solutions are landmarks. However, it has shown that landmarks are an important supportive element in wayfinding tasks [Golledge, 1999]. One of the key strengths of a map is that it can visualize features and their spatial relationships of a large area. Though, the limited space of mobile devices leads to a visualization of only a discrete view of an area. As consequence, the acquisition of spatial knowledge is impacted with respect to accuracy and response time [Dillemuth, 2009]. Since the space of the display is limited, landmarks are often outside of the displayed area. Accordingly, they have to be mapped on-screen to overcome this limitation. Research has already shown that displaying distant landmarks on-screen holds positive effects on supporting persons acquisition of directional knowledge that benefits spatial orientation [Li et al., 2014]. For the reason that the chosen visualization does not convey information about distance from the user’s position to the distant object a better visualization has to be provided. Research already provides several approaches to display distant objects on small displays (e.g. [Baudisch and Rosenholtz, 2003], [Gustafson et al., 2008], [Bertel et al., 2014]). However, given approaches are mainly focused on guiding a user to a distant location. Therefore, this thesis will aim at adapting common approaches of research to display off-screen landmarks in order to investigate in what extent spatial orientation is supported while navigating through traffic.
 
 ### Status
-Just started...
+Wi-Fi Pointers  
+Tangible Pointers  
+Wedges  
+
