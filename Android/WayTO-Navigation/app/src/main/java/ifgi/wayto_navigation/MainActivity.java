@@ -237,10 +237,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
                 //startLocationUpdates();
-                mapboxMap.getUiSettings().setCompassEnabled(false);
-                mapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
-                mapboxMap.getUiSettings().setRotateGesturesEnabled(false);
-                mapboxMap.getUiSettings().setAttributionEnabled(false);
+                mMapboxMap.getUiSettings().setCompassEnabled(false);
+                mMapboxMap.getUiSettings().setLogoEnabled(false); //needs to be enabled in production
+                mMapboxMap.getUiSettings().setRotateGesturesEnabled(false);
+                mMapboxMap.getUiSettings().setAttributionEnabled(false); //needs to be enabled in production
+                mMapboxMap.getUiSettings().setZoomGesturesEnabled(false);
+
                 try {
                     if(simulate) {
                         simulate_route();
