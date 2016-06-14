@@ -1,7 +1,10 @@
 package ifgi.wayto_navigation.utils;
 
+import android.graphics.PointF;
+
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.vividsolutions.jts.geom.Coordinate;
 
 /**
  * Created by Daniel Schumacher on 14.06.2016.
@@ -46,5 +49,27 @@ public class SpatialUtils {
                 gLatLngLandmark, half_distance, heading);
         return new LatLng(googleEdge.latitude, googleEdge.longitude);
     }
+
+    /**
+     * Calculate a target LatLng from given origin, heading, offset, distance
+     * @param origin
+     * @param heading
+     * @param angle
+     * @param dist
+     * @return
+     */
+    public static LatLng calculateTargetLatLng(LatLng origin, double heading, double angle, double dist) {
+        com.google.android.gms.maps.model.LatLng gLatLngLandmark = new
+                com.google.android.gms.maps.model.LatLng(
+                origin.getLatitude(), origin.getLongitude());
+        com.google.android.gms.maps.model.LatLng googleEdge = SphericalUtil.computeOffset(
+                gLatLngLandmark, dist, heading + angle);
+        return new LatLng(googleEdge.latitude, googleEdge.longitude);
+    }
+
+    public static Coordinate pointF2Coordinate(PointF pointF) {
+        return new Coordinate(pointF.x, pointF.y);
+    }
+
 
 }

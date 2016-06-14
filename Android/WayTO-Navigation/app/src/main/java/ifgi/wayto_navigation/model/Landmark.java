@@ -43,6 +43,7 @@ import ifgi.wayto_navigation.R;
 import ifgi.wayto_navigation.utils.SpatialUtils;
 
 import static ifgi.wayto_navigation.utils.SpatialUtils.calculateMidPoint;
+import static ifgi.wayto_navigation.utils.SpatialUtils.pointF2Coordinate;
 
 
 /**
@@ -222,277 +223,12 @@ public class Landmark {
         return new onScreen(map, this);
     }
 
-    public class Wedge extends Visualization{
 
-        public Wedge(MapboxMap map, Landmark landmark, Context context) {
-            this.landmark = landmark;
-            this.context = context;
-            this.visualization = new ArrayList<>();
-            draw(map);
-        }
-
-        private List<Annotation> visualization;
-        private Landmark landmark;
-        private Context context;
-
-        @Override
-        public List<Annotation> getVisualization() {
-            return this.visualization;
-        }
-
-        @Override
-        public void remove(MapboxMap mapboxMap) {
-            mapboxMap.removeAnnotations(this.getVisualization());
-        }
-
-        /**
-         * Wedge Off-Screen visualization for distant landmarks
-         * Reference: Sean Gustafson, Patrick Baudisch, Carl Gutwin, and Pourang Irani. 2008.
-         * Wedge: clutter-free visualization of off-screen locations.
-         * In Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI '08).
-         * ACM, New York, NY, USA, 787-796. DOI=http://dx.doi.org/10.1145/1357054.1357179
-         * todo: Calculate intersection point via bbox-polygon/landmark position
-         * @param map Current MapboxMap object
-         * @return MapBox Polygon Object
-         */
-        private void draw(MapboxMap map) {
-            Coordinate[] bbox_px_coords = bboxCoordsSL(map);
-            Polygon bbox_new = wedgeBboxPolygon(bbox_px_coords);
-            //Polygon bbox_px = new GeometryFactory().createPolygon(bbox_px_coords);
-            this.landmark.locationScreen = map.getProjection().toScreenLocation(landmark.locationLatLng);
-            Point landmark_sl = new GeometryFactory().createPoint(
-                    new Coordinate(this.landmark.locationScreen.x, this.landmark.locationScreen.y));
-            Coordinate intersection_heading_coord = DistanceOp.nearestPoints(bbox_new, landmark_sl)[0];
-            LatLng intersection_heading = map.getProjection().fromScreenLocation(
-                    new PointF((float)intersection_heading_coord.x, (float)intersection_heading_coord.y));
-            //Coordinate[] intersection_coords = DistanceOp.nearestPoints(bbox_px, landmark_sl);
-            /**
-            Log.d(this.landmark.getName(), landmark_sl +"");
-            Log.d(this.landmark.getName(), bbox_px.toString());*/
-            //Coordinate intersection_coord = intersection_coords[0];
-            Coordinate intersection_coord = intersection_heading_coord;
-            //double d = landmark_sl.distance(new GeometryFactory().createPoint(intersection_coord));
-
-            LatLng intersection = map.getProjection().fromScreenLocation(
-                    new PointF((float)intersection_coord.x, (float)intersection_coord.y));
-
-
-            double distanceToScreen = distanceToScreen(map, intersection); //in pixel
-            double leg = calculateLeg(distanceToScreen);
-            double ratio = leg / distanceToScreen;
-            double true_distance = intersection.distanceTo(this.landmark.getLocationLatLng());
-            double distance = ratio * true_distance;
-            //double map_orientation = map.getCameraPosition().bearing;
-            double heading = SpatialUtils.bearing(landmark.getLocationLatLng(), intersection_heading)
-                - map.getCameraPosition().bearing;
-            double aperture = calculateAperture(distanceToScreen, leg);
-
-            LatLng p1 = calculateTargetLatLng(this.landmark.getLocationLatLng(), heading, -(aperture / 2), distance);
-            LatLng p2 = calculateTargetLatLng(this.landmark.getLocationLatLng(), heading, (aperture / 2), distance);
-            LatLng mid_point = calculateMidPoint(p1, p2);
-            //Log.d("Wedge", this.landmark.getName() + " Distance to screen px: " + distanceToScreen + " True distance " + true_distance + " Leg " + leg + " Ratio " + ratio + " Distance " + distance);
-            PolylineOptions polygonOption = new PolylineOptions()
-                    .add(locationLatLng)
-                    .add(p1)
-                    //.add(mid_point)
-                    .add(p2)
-                    .add(locationLatLng)
-                    //.fillColor(Color.parseColor("#00000000"))
-                    .width(1.5f)
-                    .color(Color.parseColor("#990000"));
-            //this.visualization.add(map.addPolyline(new PolylineOptions().add(landmark.getLocationLatLng()).add(intersection).color(Color.parseColor("#990000"))));
-
-            this.visualization.add(map.addPolyline(polygonOption));
-            //com.mapbox.mapboxsdk.annotations.Polygon Polyline = (com.mapbox.mapboxsdk.annotations.Polyline) this.visualization.get(0);
-            drawWedgeMarker(map, mid_point);
-
-        }
-
-        private void drawWedgeMarker(MapboxMap map, LatLng mid_point) {
-            this.visualization.add(map.addMarker(new MarkerOptions()
-                    .position(
-                            new LatLng(mid_point.getLatitude(), mid_point.getLongitude()))
-                    .icon(this.landmark.getOff_screen_icon())));
-        }
-
-        private Coordinate transform_coordinate(Coordinate coordinate) {
-            coordinate.y = coordinate.y * -1;
-            return coordinate;
-        }
-
-        private Coordinate[] transform_coordinates (Coordinate[] coordinates) {
-            for (int i=0; i<coordinates.length; i++) {
-                coordinates[i] = transform_coordinate(coordinates[i]);
-            }
-            return coordinates;
-        }
-
-        private LineString createArc(Coordinate center, double radius, double start_angle, double end_angle) {
-            center = transform_coordinate(center);
-            GeometricShapeFactory gsf = new GeometricShapeFactory();
-            gsf.setSize(radius * 2); // radius
-            gsf.setNumPoints(200);
-            gsf.setCentre(center);
-            LineString coordinates = gsf.createArc(start_angle, end_angle);
-            coordinates = new GeometryFactory().createLineString(transform_coordinates(coordinates.getCoordinates()));
-            return coordinates;
-        }
-
-
-        private Polygon wedgeBboxPolygon(Coordinate[] coordinates) {
-            LineMerger lm = new LineMerger();
-
-            double min_x = coordinates[0].x;
-            double max_x = coordinates[1].x;
-            double min_y = coordinates[0].y;
-            double max_y = coordinates[2].y;
-            double OFFSET = max_y * 1/5;
-
-
-            LineString arc_top_right = createArc(new Coordinate(max_x - OFFSET, min_y + OFFSET), OFFSET, 0, Math.PI /2);
-            LineString arc_bottom_right = createArc(new Coordinate(max_x - OFFSET, max_y - OFFSET), OFFSET, (Math.PI * 1.5), Math.PI /2);
-            LineString arc_bottom_left = createArc(new Coordinate(min_x + OFFSET, max_y - OFFSET), OFFSET, (Math.PI), Math.PI /2);
-            LineString arc_top_left = createArc(new Coordinate(min_x + OFFSET, min_y + OFFSET), OFFSET, (Math.PI / 2), Math.PI /2);
-            lm.add(arc_top_left);
-            lm.add(arc_bottom_left);
-            lm.add(arc_bottom_right);
-            lm.add(arc_top_right);
-            //lm.add(connection);
-            //Coordinate[] lol = arc_top_left_start + arc_top_left_start;
-            Collection ls = lm.getMergedLineStrings();
-            ls.add(new GeometryFactory().createPoint(arc_top_left.getCoordinateN(0)));
-            Geometry geom = new GeometryFactory().buildGeometry(ls);
-
-            return new GeometryFactory().createPolygon(geom.getCoordinates());
-        }
-
-
-        /**
-         * calculates the length of each leg in pixels (wedge)
-         * @param distanceToScreen distance between target and intersection in pixels
-         * @return
-         */
-        private double calculateLeg(double distanceToScreen) {
-            double INTRUSION_CONSTANT = 150;
-            double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
-            return leg;
-        }
-
-        private double calculateAperture(double dist, double leg) {
-            return Math.toDegrees((5 + dist * 0.05) / leg);
-        }
-
-        private double calculateDistance(double screen_distance, LatLng intersection) {
-            double distance = intersection.distanceTo(this.landmark.getLocationLatLng());
-
-
-            return 0;
-        }
-    }
 
     public Wedge drawWedge(MapboxMap map, Context context) {
         return new Wedge(map, this, context);
     }
 
-    /**
-     * Visualizing off-screen landmark as tangible pointer
-     * Sven Bertel, Hans-Ulrich Lutter, Tom Kohlberg, and Dora Spensberger (2014).
-     * Tangible Pointers to Map Locations.
-     * In Christian Freksa, Bernhard Nebel, Mary Hegarty, & Thomas Barkowsky (Eds).
-     * Poster presentations of the Spatial Cognition 2014 conference.
-     * SFB/TR 8 Report No. 036-06/2014 (pp. 17–20). Bremen / Freiburg.
-     */
-    public class TangiblePointer extends Visualization{
-        private List<Annotation> visualization;
-        private LatLng onScreenAnchor;
-        private Landmark landmark;
-        private Context context;
-        private float alpha;
-        private boolean withStyle;
-
-        public TangiblePointer(MapboxMap map, Landmark l, Context c, boolean style) {
-            this.context = c;
-            this.visualization = new ArrayList<>();
-            this.landmark = l;
-            this.onScreenAnchor = this.landmark.onScreenAnchor(map);
-            this.withStyle = style;
-            setLine(map);
-        }
-
-        @Override
-        public List<Annotation> getVisualization() {
-            return this.visualization;
-        }
-
-        @Override
-        public void remove(MapboxMap mapboxMap) {
-            mapboxMap.removeAnnotations(this.getVisualization());
-        }
-
-        private void setIcon(MapboxMap map) {
-            LatLng position = this.onScreenAnchor;
-            MarkerOptions markerOptions = new MarkerOptions()
-                    .position(position).icon(this.landmark.getOff_screen_icon());
-            this.visualization.add(map.addMarker(markerOptions));
-        }
-
-        private void setLine(MapboxMap map) {
-            LatLng landmark = this.landmark.getLocationLatLng();
-            float heading = (float) SpatialUtils.bearing(this.onScreenAnchor, landmark);
-            double distance = this.onScreenAnchor.distanceTo(landmark);
-            float width;
-            PolylineOptions polylineOptions;
-            LatLng p1;
-            LatLng p2;
-            if (withStyle) {
-                width = (float) distance * 1 / 1000 + 2;
-                this.alpha = (float) ((distance * 1 / 50 + 30) * 2.5) / 255;
-                distance = Math.sqrt(distance) + 25;
-                p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
-                p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
-                polylineOptions = new PolylineOptions()
-                        .add(p1).add(p2).color(Color.parseColor("#000000")).width(width).alpha(this.alpha);
-            }else{
-                distance = Math.sqrt(distance) + 25;
-                p1 = calculateTargetLatLng(this.onScreenAnchor, heading, 0, distance);
-                p2 = calculateTargetLatLng(this.onScreenAnchor, heading - 180, 0, distance);
-                polylineOptions = new PolylineOptions()
-                        .add(p1).add(p2).color(Color.parseColor("#000000")).width(4);
-            }
-
-            int count = 0;
-            int maxTries = 10;
-            while(this.visualization.size() == 0) {
-                try {
-                    this.visualization.add(map.addPolyline(polylineOptions));
-                    setIcon(map);
-                    setArrow(p1, map, heading, withStyle);
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    if (++count == maxTries) throw e;
-                }
-            }
-        }
-
-        private void setArrow(LatLng position, MapboxMap map, float angle, boolean withStyle) {
-            Globals globals = Globals.getInstance();
-            MarkerViewOptions markerViewOptions = new MarkerViewOptions();
-            angle = (float) (angle - map.getCameraPosition().bearing);
-            if (globals.getArrow_icon() == null) {
-                globals.setArrow_icon(IconFactory.getInstance(this.context)
-                        .fromResource(R.drawable.arrow_black));
-            }
-            markerViewOptions.icon(globals.getArrow_icon());
-            markerViewOptions.position(position);
-            markerViewOptions.rotation(angle);
-            markerViewOptions.anchor(0.5f, 0.5f);
-            MarkerView markerView = map.addMarker(markerViewOptions);
-            //markerView.setRotation(angle);
-            if (withStyle) {
-                markerView.setAlpha(alpha);
-            }
-            this.visualization.add(markerView);
-        }
-    }
 
     private TangiblePointer drawTangiblePointer(MapboxMap map, Context c, boolean style) {
         return new TangiblePointer(map, this, c, style);
@@ -545,27 +281,15 @@ public class Landmark {
             return this.on_screen_markerOptions;
     }
 
-    private LatLng calculateTargetLatLng(LatLng origin, double heading, double angle, double dist) {
-        com.google.android.gms.maps.model.LatLng gLatLngLandmark = new
-                com.google.android.gms.maps.model.LatLng(
-                origin.getLatitude(), origin.getLongitude());
-        com.google.android.gms.maps.model.LatLng googleEdge = SphericalUtil.computeOffset(
-                gLatLngLandmark, dist, heading + angle);
-        return new LatLng(googleEdge.latitude, googleEdge.longitude);
-    }
-
-
-    private double distanceToScreen(MapboxMap map, LatLng intersection) {
+    public double distanceToScreen(MapboxMap map, LatLng intersection) {
         PointF landmark_sl = map.getProjection().toScreenLocation(this.locationLatLng);
         PointF intersection_sl = map.getProjection().toScreenLocation(intersection);
         return pointF2Coordinate(landmark_sl).distance(pointF2Coordinate(intersection_sl));
     }
 
-    private Coordinate pointF2Coordinate(PointF pointF) {
-        return new Coordinate(pointF.x, pointF.y);
-    }
 
-    private Geometry customIntersectionPoint(LineString ls, Polygon polygon) {
+
+    public static Geometry customIntersectionPoint(LineString ls, Polygon polygon) {
 
         List<LineString> lineStrings = new ArrayList<>();
         Coordinate[] polygon_coordinates = polygon.getCoordinates();
@@ -586,7 +310,7 @@ public class Landmark {
 
 
 
-    private Polygon getBboxPolygonJTS(MapboxMap map) {
+    public static Polygon getBboxPolygonJTS(MapboxMap map) {
         return new GeometryFactory().createPolygon(getBboxPolygonCoordinates(map));
     }
 
@@ -728,7 +452,7 @@ public class Landmark {
         return i;
     }
 
-    private Coordinate[] bboxCoordsSL(MapboxMap map) {
+    public static Coordinate[] bboxCoordsSL(MapboxMap map) {
         Projection proj = map.getProjection();
         VisibleRegion bbox = proj.getVisibleRegion();
         Coordinate[] coordinates = new Coordinate[5];
