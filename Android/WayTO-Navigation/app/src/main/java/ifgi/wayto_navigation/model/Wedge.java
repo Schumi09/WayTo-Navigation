@@ -25,7 +25,6 @@ import java.util.List;
 
 import ifgi.wayto_navigation.utils.SpatialUtils;
 
-import static ifgi.wayto_navigation.model.Landmark.bboxCoordsSL;
 import static ifgi.wayto_navigation.utils.SpatialUtils.calculateMidPoint;
 import static ifgi.wayto_navigation.utils.SpatialUtils.calculateTargetLatLng;
 
@@ -38,12 +37,14 @@ public class Wedge extends Visualization{
         this.landmark = landmark;
         this.context = context;
         this.visualization = new ArrayList<>();
+        this.globals = Globals.getInstance();
         draw(map);
     }
 
     private List<Annotation> visualization;
     private Landmark landmark;
     private Context context;
+    private Globals globals;
 
     @Override
     public List<Annotation> getVisualization() {
@@ -66,7 +67,7 @@ public class Wedge extends Visualization{
      * @return MapBox Polygon Object
      */
     private void draw(MapboxMap map) {
-        Coordinate[] bbox_px_coords = bboxCoordsSL(map);
+        Coordinate[] bbox_px_coords = globals.getBboxCoordsSL();
         Polygon bbox_new = wedgeBboxPolygon(bbox_px_coords);
         //Polygon bbox_px = new GeometryFactory().createPolygon(bbox_px_coords);
         PointF locationScreen = map.getProjection().toScreenLocation(landmark.getLocationLatLng());

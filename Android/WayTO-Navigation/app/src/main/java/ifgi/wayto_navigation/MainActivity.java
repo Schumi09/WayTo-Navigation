@@ -42,6 +42,7 @@ import com.mapbox.mapboxsdk.location.LocationServices;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
+import com.mapbox.mapboxsdk.maps.Projection;
 import com.mapbox.services.Constants;
 import com.mapbox.services.commons.ServicesException;
 import com.mapbox.services.commons.models.Position;
@@ -344,8 +345,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void landmarkVisualization() {
         if (mMapboxMap != null && mCurrentLocation != null) {
-
+            Projection projection = mMapboxMap.getProjection();
             globals.setOnScreenAnchorsTodo(true);
+            globals.setBboxCoordsSL(projection);
+            globals.setBboxPolygonCoordinates(projection);
+            globals.createBboxPolygonJTS();
             for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
                 l.visualize(mMapboxMap, getApplicationContext());

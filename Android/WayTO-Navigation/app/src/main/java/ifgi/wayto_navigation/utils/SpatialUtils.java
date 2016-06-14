@@ -4,6 +4,7 @@ import android.graphics.PointF;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.maps.Projection;
 import com.vividsolutions.jts.geom.Coordinate;
 
 /**
@@ -69,6 +70,11 @@ public class SpatialUtils {
 
     public static Coordinate pointF2Coordinate(PointF pointF) {
         return new Coordinate(pointF.x, pointF.y);
+    }
+
+    public static Coordinate latLngToSLCoordinate(LatLng latLng, Projection projection) {
+        PointF p = projection.toScreenLocation(latLng);
+        return new Coordinate(p.x, p.y);
     }
 
 

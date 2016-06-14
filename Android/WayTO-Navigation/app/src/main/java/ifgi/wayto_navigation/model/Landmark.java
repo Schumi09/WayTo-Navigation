@@ -43,6 +43,7 @@ import ifgi.wayto_navigation.R;
 import ifgi.wayto_navigation.utils.SpatialUtils;
 
 import static ifgi.wayto_navigation.utils.SpatialUtils.calculateMidPoint;
+import static ifgi.wayto_navigation.utils.SpatialUtils.latLngToSLCoordinate;
 import static ifgi.wayto_navigation.utils.SpatialUtils.pointF2Coordinate;
 
 
@@ -234,11 +235,11 @@ public class Landmark {
         return new TangiblePointer(map, this, c, style);
     }
 
-    public static void initOnScreenAnchors(MapboxMap map) {
+    public static void initOnScreenAnchors() {
         Globals globals = Globals.getInstance();
         if (globals.onScreenAnchorsTodo()) {
             globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                    Landmark.getBboxPolygonCoordinates(map)));
+                    globals.getBboxPolygonCoordinates()));
             List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
                     globals.getOnScreenFrameCoords());
             globals.setOnScreenAnchors(onScreenAnchors);
@@ -253,7 +254,7 @@ public class Landmark {
      */
     public LatLng onScreenAnchor(MapboxMap map) {
         Globals globals = Globals.getInstance();
-        Landmark.initOnScreenAnchors(map);
+        Landmark.initOnScreenAnchors();
         Projection proj = map.getProjection();
         LatLng userPosition = map.getCameraPosition().target;
         Coordinate[] connection_coordinates = new Coordinate[2];
@@ -310,22 +311,7 @@ public class Landmark {
 
 
 
-    public static Polygon getBboxPolygonJTS(MapboxMap map) {
-        return new GeometryFactory().createPolygon(getBboxPolygonCoordinates(map));
-    }
 
-    public static Coordinate[] getBboxPolygonCoordinates(MapboxMap map) {
-        Projection proj = map.getProjection();
-        VisibleRegion bbox = proj.getVisibleRegion();
-
-        Coordinate[] coordinates = new Coordinate[5];
-        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, proj);
-        coordinates[1] = latLngToSLCoordinate(bbox.farRight, proj);
-        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, proj);
-        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, proj);
-        coordinates[4] = coordinates[0];
-        return coordinates;
-    }
 
     public static Coordinate[] onScreenFrame(Coordinate[] coordinates) {
         double OFFSET = coordinates[1].x * 0.12; // 12% of display's top max pixel
@@ -452,26 +438,11 @@ public class Landmark {
         return i;
     }
 
-    public static Coordinate[] bboxCoordsSL(MapboxMap map) {
-        Projection proj = map.getProjection();
-        VisibleRegion bbox = proj.getVisibleRegion();
-        Coordinate[] coordinates = new Coordinate[5];
-        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, proj);
-        coordinates[1] = latLngToSLCoordinate(bbox.farRight, proj);
-        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, proj);
-        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, proj);
-        coordinates[4] = coordinates[0];
 
-        return coordinates;
-    }
-
-    private static Coordinate latLngToSLCoordinate(LatLng latLng, Projection projection) {
-        PointF p = projection.toScreenLocation(latLng);
-        return new Coordinate(p.x, p.y);
-    }
 
     public boolean isOffScreen(MapboxMap map) {
-        Polygon bbox_polygon = getBboxPolygonJTS(map);
+        Globals globals = Globals.getInstance();
+        Polygon bbox_polygon = globals.getBboxPolygonJTS();
         Coordinate sl = latLngToSLCoordinate(this.locationLatLng, map.getProjection());
         return !bbox_polygon.contains(new GeometryFactory().createPoint(sl));
     }
