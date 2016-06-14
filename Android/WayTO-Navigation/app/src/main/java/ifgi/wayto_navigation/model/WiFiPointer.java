@@ -17,7 +17,8 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import java.util.ArrayList;
 import java.util.List;
 
-import ifgi.wayto_navigation.ImageUtils;
+import ifgi.wayto_navigation.utils.ImageUtils;
+import ifgi.wayto_navigation.utils.SpatialUtils;
 
 /**
  * Created by Daniel on 06.06.2016.
@@ -49,7 +50,7 @@ public class WiFiPointer extends Visualization{
     }
 
     private void setVisualization(MapboxMap map) {
-        float angle = (float) this.landmark.heading(
+        float angle = (float) SpatialUtils.bearing(
                 this.onScreenAnchor, this.landmark.getLocationLatLng());
         angle = (float) (angle - map.getCameraPosition().bearing);
         double distance = this.landmark.getLocationLatLng().distanceTo(this.onScreenAnchor);

@@ -1,4 +1,4 @@
-package ifgi.wayto_navigation;
+package ifgi.wayto_navigation.utils;
 
 import android.content.Context;
 import android.content.res.Resources;

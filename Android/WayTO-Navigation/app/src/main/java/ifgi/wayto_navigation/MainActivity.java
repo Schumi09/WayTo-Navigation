@@ -30,7 +30,6 @@ import android.widget.Toast;
 import com.hs.gpxparser.GPXParser;
 import com.hs.gpxparser.modal.GPX;
 import com.mapbox.mapboxsdk.annotations.Icon;
-import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
@@ -72,6 +71,7 @@ import java.util.Locale;
 
 import ifgi.wayto_navigation.model.Globals;
 import ifgi.wayto_navigation.model.Landmark;
+import ifgi.wayto_navigation.utils.ImageUtils;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -231,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
                     @Override
                     public void onCameraChange(CameraPosition position) {
+                        Log.d("Bearing Map", "" + mMapboxMap.getCameraPosition().bearing);
                         landmarkVisualization();
                     }
                 });

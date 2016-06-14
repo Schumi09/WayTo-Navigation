@@ -38,8 +38,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import ifgi.wayto_navigation.ImageUtils;
+import ifgi.wayto_navigation.utils.ImageUtils;
 import ifgi.wayto_navigation.R;
+import ifgi.wayto_navigation.utils.SpatialUtils;
+
+import static ifgi.wayto_navigation.utils.SpatialUtils.calculateMidPoint;
 
 
 /**
@@ -64,8 +67,8 @@ public class Landmark {
 
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
 
-    public Landmark(String lname, double lon, double lat, boolean isOnScreenOnly
-            , double range, Context context) {
+    public Landmark(String lname, double lon, double lat, boolean isOnScreenOnly,
+                    double range, Context context) {
 
         this.name = lname;
         this.location = new Location("Landmark");
@@ -255,7 +258,7 @@ public class Landmark {
         private void draw(MapboxMap map) {
             Coordinate[] bbox_px_coords = bboxCoordsSL(map);
             Polygon bbox_new = wedgeBboxPolygon(bbox_px_coords);
-            Polygon bbox_px = new GeometryFactory().createPolygon(bbox_px_coords);
+            //Polygon bbox_px = new GeometryFactory().createPolygon(bbox_px_coords);
             this.landmark.locationScreen = map.getProjection().toScreenLocation(landmark.locationLatLng);
             Point landmark_sl = new GeometryFactory().createPoint(
                     new Coordinate(this.landmark.locationScreen.x, this.landmark.locationScreen.y));
@@ -280,7 +283,8 @@ public class Landmark {
             double true_distance = intersection.distanceTo(this.landmark.getLocationLatLng());
             double distance = ratio * true_distance;
             //double map_orientation = map.getCameraPosition().bearing;
-            double heading = heading(landmark.getLocationLatLng(), intersection_heading);// - map_orientation;
+            double heading = SpatialUtils.bearing(landmark.getLocationLatLng(), intersection_heading)
+                - map.getCameraPosition().bearing;
             double aperture = calculateAperture(distanceToScreen, leg);
 
             LatLng p1 = calculateTargetLatLng(this.landmark.getLocationLatLng(), heading, -(aperture / 2), distance);
@@ -362,16 +366,6 @@ public class Landmark {
             return new GeometryFactory().createPolygon(geom.getCoordinates());
         }
 
-        private LatLng calculateMidPoint(LatLng p1, LatLng p2){
-            double heading = heading(p1, p2);
-            double half_distance = p1.distanceTo(p2) / 2;
-            com.google.android.gms.maps.model.LatLng gLatLngLandmark = new
-                    com.google.android.gms.maps.model.LatLng(
-                    p1.getLatitude(), p1.getLongitude());
-            com.google.android.gms.maps.model.LatLng googleEdge = SphericalUtil.computeOffset(
-                    gLatLngLandmark, half_distance, heading);
-            return new LatLng(googleEdge.latitude, googleEdge.longitude);
-        }
 
         /**
          * calculates the length of each leg in pixels (wedge)
@@ -444,7 +438,7 @@ public class Landmark {
 
         private void setLine(MapboxMap map) {
             LatLng landmark = this.landmark.getLocationLatLng();
-            float heading = (float) heading(this.onScreenAnchor, landmark);
+            float heading = (float) SpatialUtils.bearing(this.onScreenAnchor, landmark);
             double distance = this.onScreenAnchor.distanceTo(landmark);
             float width;
             PolylineOptions polylineOptions;
@@ -590,22 +584,7 @@ public class Landmark {
         return null;
     }
 
-    /**
-     * Calculates the heading from one coordinate to another
-     * Todo: replace with own implementation
-     * @param coord1
-     * @param coord2
-     * @return
-     */
-    public double heading(LatLng coord1, LatLng coord2) {
-        com.google.android.gms.maps.model.LatLng p1 = new com.google.android.gms.maps.model.LatLng
-                (coord1.getLatitude(), coord1.getLongitude());
-        com.google.android.gms.maps.model.LatLng p2 = new com.google.android.gms.maps.model.LatLng
-                (coord2.getLatitude(), coord2.getLongitude());
-        double heading = SphericalUtil.computeHeading(p1, p2);
 
-        return heading;
-    }
 
     private Polygon getBboxPolygonJTS(MapboxMap map) {
         return new GeometryFactory().createPolygon(getBboxPolygonCoordinates(map));
