@@ -43,6 +43,7 @@ import ifgi.wayto_navigation.R;
 import ifgi.wayto_navigation.utils.SpatialUtils;
 
 import static ifgi.wayto_navigation.utils.SpatialUtils.calculateMidPoint;
+import static ifgi.wayto_navigation.utils.SpatialUtils.coordinateToPointF;
 import static ifgi.wayto_navigation.utils.SpatialUtils.latLngToSLCoordinate;
 import static ifgi.wayto_navigation.utils.SpatialUtils.pointF2Coordinate;
 
@@ -65,6 +66,9 @@ public class Landmark {
 
     private boolean isOnScreenOnly;
     private double rangeToVisualize;
+
+    private static int DISTANCE_THRESHOLD = 10; //meters
+
 
 
     public static final String VISUALIZATION_TYPE_KEY = "checkbox_visualization_type_preference";
@@ -288,8 +292,6 @@ public class Landmark {
         return pointF2Coordinate(landmark_sl).distance(pointF2Coordinate(intersection_sl));
     }
 
-
-
     public static Geometry customIntersectionPoint(LineString ls, Polygon polygon) {
 
         List<LineString> lineStrings = new ArrayList<>();
@@ -308,10 +310,6 @@ public class Landmark {
         }
         return null;
     }
-
-
-
-
 
     public static Coordinate[] onScreenFrame(Coordinate[] coordinates) {
         double OFFSET = coordinates[1].x * 0.12; // 12% of display's top max pixel
@@ -444,7 +442,10 @@ public class Landmark {
         Globals globals = Globals.getInstance();
         Polygon bbox_polygon = globals.getBboxPolygonJTS();
         Coordinate sl = latLngToSLCoordinate(this.locationLatLng, map.getProjection());
-        return !bbox_polygon.contains(new GeometryFactory().createPoint(sl));
+        PointF intersection = coordinateToPointF(DistanceOp.nearestPoints(bbox_polygon, this.locationJTS)[0]);
+        LatLng intersectionLatLng = map.getProjection().fromScreenLocation(intersection);
+        return (!bbox_polygon.contains(new GeometryFactory().createPoint(sl)))
+                && this.getLocationLatLng().distanceTo(intersectionLatLng) >= DISTANCE_THRESHOLD;
     }
 
 

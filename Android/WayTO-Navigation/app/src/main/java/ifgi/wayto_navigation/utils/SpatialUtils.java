@@ -72,10 +72,13 @@ public class SpatialUtils {
         return new Coordinate(pointF.x, pointF.y);
     }
 
+    public static PointF coordinateToPointF(Coordinate coordinate) {
+        return new PointF((float) coordinate.x, (float) coordinate.y);
+    }
+
     public static Coordinate latLngToSLCoordinate(LatLng latLng, Projection projection) {
         PointF p = projection.toScreenLocation(latLng);
         return new Coordinate(p.x, p.y);
     }
-
 
 }
