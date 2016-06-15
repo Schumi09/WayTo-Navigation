@@ -239,13 +239,13 @@ public class Landmark {
         return new TangiblePointer(map, this, c, style);
     }
 
-    public static void initOnScreenAnchors() {
+    public static void initOnScreenAnchors(double offset_ratio, int step) {
         Globals globals = Globals.getInstance();
         if (globals.onScreenAnchorsTodo()) {
             globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                    globals.getBboxPolygonCoordinates()));
+                    globals.getBboxPolygonCoordinates(), offset_ratio));
             List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
-                    globals.getOnScreenFrameCoords());
+                    globals.getOnScreenFrameCoords(), step);
             globals.setOnScreenAnchors(onScreenAnchors);
             globals.setOnScreenAnchorsTodo(false);
         }
@@ -256,9 +256,9 @@ public class Landmark {
      * @param map current mapboxmap object
      * @return LatLng the position
      */
-    public LatLng onScreenAnchor(MapboxMap map) {
+    public LatLng onScreenAnchor(MapboxMap map, double offset_ratio, int step) {
         Globals globals = Globals.getInstance();
-        Landmark.initOnScreenAnchors();
+        Landmark.initOnScreenAnchors(offset_ratio, step);
         Projection proj = map.getProjection();
         LatLng userPosition = map.getCameraPosition().target;
         Coordinate[] connection_coordinates = new Coordinate[2];
@@ -267,7 +267,6 @@ public class Landmark {
         LineString connection = new GeometryFactory().createLineString(connection_coordinates);
         Coordinate[] onScreenFrameCoords = globals.getOnScreenFrameCoords();
         Polygon onScreenAnchorPolygon = new GeometryFactory().createPolygon(onScreenFrameCoords);
-        Log.d("Anchors", onScreenAnchors(onScreenFrameCoords).toString());
         Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon)
                 .getCoordinate();
         int anchor_position = getOnScreenAnchorPosition(intersection);
@@ -311,8 +310,8 @@ public class Landmark {
         return null;
     }
 
-    public static Coordinate[] onScreenFrame(Coordinate[] coordinates) {
-        double OFFSET = coordinates[1].x * 0.12; // 12% of display's top max pixel
+    public static Coordinate[] onScreenFrame(Coordinate[] coordinates, double offset_ratio) {
+        double OFFSET = coordinates[1].x * offset_ratio; // 12% of display's top max pixel
         Coordinate[] new_coordinates = new Coordinate[5];
         new_coordinates[0] = coordinates[0];
         new_coordinates[0].x += OFFSET;
@@ -360,11 +359,10 @@ public class Landmark {
         }
     }
 
-    public static List<OnScreenAnchor> onScreenAnchors(Coordinate[] coordinates) {
+    public static List<OnScreenAnchor> onScreenAnchors(Coordinate[] coordinates, double space) {
         List<OnScreenAnchor> anchors = new ArrayList<>();
 
         double long_dist = coordinates[1].x - coordinates[0].x;
-        double space = 90; //px
         int long_number = (int) Math.ceil(long_dist / space);
         double short_dist = coordinates[2].y - coordinates[1].y;
         int short_number = (int) Math.ceil(short_dist / space);

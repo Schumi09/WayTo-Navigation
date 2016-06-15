@@ -40,11 +40,14 @@ public class TangiblePointer extends Visualization{
     private float alpha;
     private boolean withStyle;
 
+    private static double OFFSET_RATIO = 0.12;
+    private static int STEP = 90;
+
     public TangiblePointer(MapboxMap map, Landmark l, Context c, boolean style) {
         this.context = c;
         this.visualization = new ArrayList<>();
         this.landmark = l;
-        this.onScreenAnchor = this.landmark.onScreenAnchor(map);
+        this.onScreenAnchor = this.landmark.onScreenAnchor(map, OFFSET_RATIO, STEP);
         this.withStyle = style;
         setLine(map);
     }

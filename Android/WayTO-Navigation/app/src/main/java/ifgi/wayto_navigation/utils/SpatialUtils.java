@@ -81,4 +81,8 @@ public class SpatialUtils {
         return new Coordinate(p.x, p.y);
     }
 
+    public static LatLng SLCoordinateToLatLng(Coordinate coordinate, Projection projection) {
+        return new LatLng(projection.fromScreenLocation(coordinateToPointF(coordinate)));
+    }
+
 }

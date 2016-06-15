@@ -31,11 +31,14 @@ public class WiFiPointer extends Visualization{
     private Context context;
     private static int step = 500; //meter
 
+    private static double OFFSET_RATIO = 0.12;
+    private static int STEP = 90;
+
     public WiFiPointer(MapboxMap map, Landmark landmark, Context context) {
         this.context = context;
         this.visualization = new ArrayList<>();
         this.landmark = landmark;
-        this.onScreenAnchor = this.landmark.onScreenAnchor(map);
+        this.onScreenAnchor = this.landmark.onScreenAnchor(map, OFFSET_RATIO, STEP);
         setVisualization(map);
     }
 

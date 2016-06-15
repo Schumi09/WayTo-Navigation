@@ -33,10 +33,12 @@ import static ifgi.wayto_navigation.utils.SpatialUtils.calculateTargetLatLng;
  */
 public class Wedge extends Visualization{
 
+
     public Wedge(MapboxMap map, Landmark landmark, Context context) {
         this.landmark = landmark;
         this.context = context;
         this.visualization = new ArrayList<>();
+        this.onScreenAnchor = this.landmark.onScreenAnchor(map, OFFSET_RATIO, STEP);
         this.globals = Globals.getInstance();
         draw(map);
     }
@@ -45,10 +47,14 @@ public class Wedge extends Visualization{
     private Landmark landmark;
     private Context context;
     private Globals globals;
+    private final LatLng onScreenAnchor;
 
     private static int INTRUSION_CONSTANT = 20;
     private static double APERTURE_CONSTANT = 0.15;
     private static int LEG_INCREASE = 30; //meters
+
+    private static double OFFSET_RATIO = 0.0;
+    private static int STEP = 45;
 
     @Override
     public List<Annotation> getVisualization() {
@@ -71,35 +77,22 @@ public class Wedge extends Visualization{
      * @return MapBox Polygon Object
      */
     private void draw(MapboxMap map) {
-        Coordinate[] bbox_px_coords = globals.getBboxCoordsSL();
-        Polygon bbox_new = wedgeBboxPolygon(bbox_px_coords);
-        //Polygon bbox_px = new GeometryFactory().createPolygon(bbox_px_coords);
         PointF locationScreen = map.getProjection().toScreenLocation(landmark.getLocationLatLng());
         Point landmark_sl = new GeometryFactory().createPoint(
                 new Coordinate(locationScreen.x, locationScreen.y));
-        Coordinate intersection_heading_coord = DistanceOp.nearestPoints(bbox_new, landmark_sl)[0];
-        LatLng intersection_heading = map.getProjection().fromScreenLocation(
-                new PointF((float)intersection_heading_coord.x, (float)intersection_heading_coord.y));
-        //Coordinate[] intersection_coords = DistanceOp.nearestPoints(bbox_px, landmark_sl);
-        /**
-         Log.d(this.landmark.getName(), landmark_sl +"");
-         Log.d(this.landmark.getName(), bbox_px.toString());*/
-        //Coordinate intersection_coord = intersection_coords[0];
-        Coordinate intersection_coord = intersection_heading_coord;
-        //double d = landmark_sl.distance(new GeometryFactory().createPoint(intersection_coord));
-
-        LatLng intersection = map.getProjection().fromScreenLocation(
-                new PointF((float)intersection_coord.x, (float)intersection_coord.y));
+        LatLng heading_coord = this.onScreenAnchor;
 
 
-        double distanceToScreen = this.landmark.distanceToScreen(map, intersection); //in pixel
+        double distanceToScreen = landmark_sl.distance(new GeometryFactory().createPoint(
+                SpatialUtils.pointF2Coordinate(
+                        map.getProjection().toScreenLocation(heading_coord)))); //in pixel
         double leg = calculateLeg(distanceToScreen);
         double ratio = leg / distanceToScreen;
-        double true_distance = intersection.distanceTo(this.landmark.getLocationLatLng())
-                + LEG_INCREASE;
-        double distance = ratio * true_distance;
+        double true_distance = heading_coord.distanceTo(this.landmark.getLocationLatLng());
+
+        double distance = (ratio * true_distance) + LEG_INCREASE;
         //double map_orientation = map.getCameraPosition().bearing;
-        double heading = SpatialUtils.bearing(landmark.getLocationLatLng(), intersection_heading);
+        double heading = SpatialUtils.bearing(landmark.getLocationLatLng(), heading_coord);
                 //- map.getCameraPosition().bearing;
         double aperture = calculateAperture(distanceToScreen, leg);
 
