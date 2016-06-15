@@ -46,6 +46,10 @@ public class Wedge extends Visualization{
     private Context context;
     private Globals globals;
 
+    private static int INTRUSION_CONSTANT = 20;
+    private static double APERTURE_CONSTANT = 0.15;
+    private static int LEG_INCREASE = 30; //meters
+
     @Override
     public List<Annotation> getVisualization() {
         return this.visualization;
@@ -91,7 +95,8 @@ public class Wedge extends Visualization{
         double distanceToScreen = this.landmark.distanceToScreen(map, intersection); //in pixel
         double leg = calculateLeg(distanceToScreen);
         double ratio = leg / distanceToScreen;
-        double true_distance = intersection.distanceTo(this.landmark.getLocationLatLng());
+        double true_distance = intersection.distanceTo(this.landmark.getLocationLatLng())
+                + LEG_INCREASE;
         double distance = ratio * true_distance;
         //double map_orientation = map.getCameraPosition().bearing;
         double heading = SpatialUtils.bearing(landmark.getLocationLatLng(), intersection_heading);
@@ -184,13 +189,12 @@ public class Wedge extends Visualization{
      * @return
      */
     private double calculateLeg(double distanceToScreen) {
-        double INTRUSION_CONSTANT = 150;
         double leg = distanceToScreen + Math.log((distanceToScreen + INTRUSION_CONSTANT) / 12) * 10;
         return leg;
     }
 
     private double calculateAperture(double dist, double leg) {
-        return Math.toDegrees((5 + dist * 0.05) / leg);
+        return Math.toDegrees((5 + dist * APERTURE_CONSTANT) / leg);
     }
 
     private double calculateDistance(double screen_distance, LatLng intersection) {
