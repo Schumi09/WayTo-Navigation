@@ -118,11 +118,11 @@ public class TangiblePointer extends Visualization{
         markerViewOptions.position(position);
         markerViewOptions.rotation(angle);
         markerViewOptions.anchor(0.5f, 0.5f);
-        MarkerView markerView = map.addMarker(markerViewOptions);
         //markerView.setRotation(angle);
         if (withStyle) {
-            markerView.setAlpha(alpha);
+            markerViewOptions.alpha(alpha);
         }
+        MarkerView markerView = map.addMarker(markerViewOptions);
         this.visualization.add(markerView);
     }
 }
