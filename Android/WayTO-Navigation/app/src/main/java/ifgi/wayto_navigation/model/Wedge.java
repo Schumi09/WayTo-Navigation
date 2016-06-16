@@ -49,12 +49,12 @@ public class Wedge extends Visualization{
     private Globals globals;
     private final LatLng onScreenAnchor;
 
-    private static int INTRUSION_CONSTANT = 20;
+    private static int INTRUSION_CONSTANT = 60;
     private static double APERTURE_CONSTANT = 0.15;
-    private static int LEG_INCREASE = 30; //meters
+    private static int LEG_INCREASE = 20; //meters
 
     private static double OFFSET_RATIO = 0.0;
-    private static int STEP = 45;
+    private static int STEP = 90;
 
     @Override
     public List<Annotation> getVisualization() {
@@ -82,7 +82,6 @@ public class Wedge extends Visualization{
                 new Coordinate(locationScreen.x, locationScreen.y));
         LatLng heading_coord = this.onScreenAnchor;
 
-
         double distanceToScreen = landmark_sl.distance(new GeometryFactory().createPoint(
                 SpatialUtils.pointF2Coordinate(
                         map.getProjection().toScreenLocation(heading_coord)))); //in pixel
@@ -107,7 +106,7 @@ public class Wedge extends Visualization{
                 .add(p2)
                 .add(this.landmark.getLocationLatLng())
                 //.fillColor(Color.parseColor("#00000000"))
-                .width(1.5f)
+                .width(1.8f)
                 .color(Color.parseColor("#990000"));
         //this.visualization.add(map.addPolyline(new PolylineOptions().add(landmark.getLocationLatLng()).add(intersection).color(Color.parseColor("#990000"))));
 
