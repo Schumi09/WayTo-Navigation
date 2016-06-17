@@ -1,11 +1,20 @@
 package ifgi.wayto_navigation.utils;
 
 import android.graphics.PointF;
+import android.util.Log;
 
 import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.geometry.VisibleRegion;
+import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Projection;
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.PrecisionModel;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Daniel Schumacher on 14.06.2016.
@@ -78,11 +87,49 @@ public class SpatialUtils {
 
     public static Coordinate latLngToSLCoordinate(LatLng latLng, Projection projection) {
         PointF p = projection.toScreenLocation(latLng);
-        return new Coordinate(p.x, p.y);
+        return pointF2Coordinate(p);
     }
 
     public static LatLng SLCoordinateToLatLng(Coordinate coordinate, Projection projection) {
         return new LatLng(projection.fromScreenLocation(coordinateToPointF(coordinate)));
+    }
+
+
+
+    public static List<LineString> bboxToLineStringsJTS(VisibleRegion bbox) {
+        List<LineString> bbox_borders = new ArrayList<LineString>();
+        LineString top = createLineStringFromLatLngs(bbox.farLeft, bbox.farRight);
+        LineString right = createLineStringFromLatLngs(bbox.farRight, bbox.nearRight);
+        LineString bottom = createLineStringFromLatLngs(bbox.nearRight, bbox.nearLeft);
+        LineString left = createLineStringFromLatLngs(bbox.nearLeft, bbox.farLeft);
+
+        bbox_borders.add(top);
+        bbox_borders.add(right);
+        bbox_borders.add(bottom);
+        bbox_borders.add(left);
+        return bbox_borders;
+    }
+
+    public static LineString createLineStringFromLatLngs(LatLng p1, LatLng p2) {
+        Coordinate coord1 = new Coordinate(p1.getLatitude(),p1.getLongitude());
+        Coordinate coord2 = new Coordinate(p2.getLatitude(),p2.getLongitude());
+        Coordinate[] coords = new Coordinate[2];
+        coords[0] = coord1;
+        coords[1] = coord2;
+        LineString ls = new GeometryFactory(new PrecisionModel(
+                PrecisionModel.FLOATING), 4326).createLineString(coords);
+        return ls;
+    }
+
+    public static Coordinate[] getBboxPolygonCoordinates(Projection projection) {
+        VisibleRegion bbox = projection.getVisibleRegion();
+        Coordinate[] coordinates = new Coordinate[5];
+        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, projection);
+        coordinates[1] = latLngToSLCoordinate(bbox.farRight, projection);
+        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, projection);
+        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, projection);
+        coordinates[4] = coordinates[0];
+        return coordinates;
     }
 
 }

@@ -3,6 +3,7 @@ package ifgi.wayto_navigation.model;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PointF;
+import android.util.Log;
 
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -23,13 +24,15 @@ import static ifgi.wayto_navigation.utils.SpatialUtils.latLngToSLCoordinate;
  * Created by Daniel on 20.04.2016.
  */
 public class Globals {
-    private static Globals instance = new Globals();
-
-    public static synchronized Globals getInstance() {
-        return instance;
+    private static Globals instance = null;
+    protected Globals() {
+        // Exists only to defeat instantiation.
     }
-
-    private Globals() {
+    public static Globals getInstance() {
+        if(instance == null) {
+            instance = new Globals();
+        }
+        return instance;
     }
 
     public List<Landmark.OnScreenAnchor> getOnScreenAnchors() {
@@ -82,57 +85,4 @@ public class Globals {
     }
 
     private Icon arrow_icon;
-
-
-
-    /**
-     *Bounding box methods
-     */
-
-    private Polygon bboxPolygonJTS;
-
-    public void createBboxPolygonJTS() {
-        this.bboxPolygonJTS = new GeometryFactory().createPolygon(this.bboxPolygonCoordinates);
-    }
-
-    public Polygon getBboxPolygonJTS() {
-        return this.bboxPolygonJTS;
-    }
-
-    private Coordinate[] bboxPolygonCoordinates;
-
-    public void setBboxPolygonCoordinates(Projection projection) {
-        VisibleRegion bbox = projection.getVisibleRegion();
-
-        Coordinate[] coordinates = new Coordinate[5];
-        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, projection);
-        coordinates[1] = latLngToSLCoordinate(bbox.farRight, projection);
-        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, projection);
-        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, projection);
-        coordinates[4] = coordinates[0];
-        this.bboxPolygonCoordinates = coordinates;
-    }
-
-    public Coordinate[] getBboxPolygonCoordinates() {
-        return this.bboxPolygonCoordinates;
-    }
-
-    private Coordinate[] bboxCoordsSL;
-
-    public void setBboxCoordsSL(Projection projection) {
-
-        VisibleRegion bbox = projection.getVisibleRegion();
-        Coordinate[] coordinates = new Coordinate[5];
-        coordinates[0] = latLngToSLCoordinate(bbox.farLeft, projection);
-        coordinates[1] = latLngToSLCoordinate(bbox.farRight, projection);
-        coordinates[2] = latLngToSLCoordinate(bbox.nearRight, projection);
-        coordinates[3] = latLngToSLCoordinate(bbox.nearLeft, projection);
-        coordinates[4] = coordinates[0];
-        this.bboxCoordsSL = coordinates;
-    }
-
-    public Coordinate[] getBboxCoordsSL() {
-        return bboxCoordsSL;
-    }
-
 }

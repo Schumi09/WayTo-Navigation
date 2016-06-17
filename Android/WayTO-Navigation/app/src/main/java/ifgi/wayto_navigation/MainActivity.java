@@ -352,27 +352,12 @@ public class MainActivity extends AppCompatActivity {
     Polygon onscreen;
     private void landmarkVisualization() {
         if (mMapboxMap != null && mCurrentLocation != null) {
-            Projection projection = mMapboxMap.getProjection();
             globals.setOnScreenAnchorsTodo(true);
-            globals.setBboxCoordsSL(projection);
-            globals.setBboxPolygonCoordinates(projection);
-            globals.createBboxPolygonJTS();
-
 
             for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
                 l.visualize(mMapboxMap, getApplicationContext());
             }
-
-            List<LatLng> latLngs = new ArrayList<>();
-            Coordinate[] frame = globals.getOnScreenFrameCoords();
-            for(int i=0; i<frame.length; i++) {
-                Coordinate current = frame[i];
-                latLngs.add(SLCoordinateToLatLng(current, mMapboxMap.getProjection()));
-            }
-            if(onscreen != null) { mMapboxMap.removePolygon(onscreen); }
-            onscreen = mMapboxMap.addPolygon(new PolygonOptions().addAll(latLngs).alpha(0.01f));
-
         }
     }
 

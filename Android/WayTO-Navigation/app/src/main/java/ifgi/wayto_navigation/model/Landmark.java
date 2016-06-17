@@ -42,8 +42,10 @@ import ifgi.wayto_navigation.utils.ImageUtils;
 import ifgi.wayto_navigation.R;
 import ifgi.wayto_navigation.utils.SpatialUtils;
 
+import static ifgi.wayto_navigation.utils.SpatialUtils.bboxToLineStringsJTS;
 import static ifgi.wayto_navigation.utils.SpatialUtils.calculateMidPoint;
 import static ifgi.wayto_navigation.utils.SpatialUtils.coordinateToPointF;
+import static ifgi.wayto_navigation.utils.SpatialUtils.createLineStringFromLatLngs;
 import static ifgi.wayto_navigation.utils.SpatialUtils.latLngToSLCoordinate;
 import static ifgi.wayto_navigation.utils.SpatialUtils.pointF2Coordinate;
 
@@ -63,6 +65,9 @@ public class Landmark {
     private Icon on_screen_icon;
     private MarkerViewOptions on_screen_markerOptions;
     private Visualization visualization;
+
+
+    private double heading_from_map_center;
 
     private boolean isOnScreenOnly;
     private double rangeToVisualize;
@@ -94,6 +99,20 @@ public class Landmark {
                 .icon(this.on_screen_icon)
                 .anchor(0.5f, 1);
     }
+
+    private void update(MapboxMap map) {
+        double heading = SpatialUtils.bearing(map.getCameraPosition().target, this.locationLatLng);
+        this.setHeading_from_map_center(heading);
+    }
+
+    public double getHeading_to_map_center() {
+        return heading_from_map_center;
+    }
+
+    public void setHeading_from_map_center(double heading_to_map_center) {
+        this.heading_from_map_center = heading_to_map_center;
+    }
+
 
     public Icon getOff_screen_icon() {
         return off_screen_icon;
@@ -168,37 +187,58 @@ public class Landmark {
     public void visualize(MapboxMap map, Context context) {
 
         Log.d("Landmark Name", this.getName());
+        this.update(map);
 
         removeVisualization(map);
 
+
+        Polygon bbox_polygon = new GeometryFactory().createPolygon(
+                SpatialUtils.getBboxPolygonCoordinates(map.getProjection()));
+        Log.d("bbox_visualize", bbox_polygon.toString());
+        Coordinate sl = latLngToSLCoordinate(this.locationLatLng, map.getProjection());
+        PointF intersection = coordinateToPointF(DistanceOp.nearestPoints(
+                bbox_polygon, this.locationJTS)[0]);
+        LatLng intersectionLatLng = map.getProjection().fromScreenLocation(intersection);
+        int positionToLocation = positionToLocation(map);
+        setDISTANCE_THRESHOLD(positionToLocation);
+        double true_distance_to_screen = this.getLocationLatLng().distanceTo(intersectionLatLng);
+        boolean threshold = true_distance_to_screen >= DISTANCE_THRESHOLD;
+        //Log.d("true_distance_to_screen", "Distance " + true_distance_to_screen + " th " + DISTANCE_THRESHOLD + " bth " + threshold);
+
+
         boolean isOffScreen = this.isOffScreen(map);
 
-        if (!isOffScreen) {
-            this.visualization = drawOnScreenMarker(map);
-        }
+        //Log.d("isOffScreen", isOffScreen + "");
 
-        boolean toVisualize = ((map.getCameraPosition().target.distanceTo(this.getLocationLatLng()))
-                <= this.rangeToVisualize) || this.rangeToVisualize == 0;
+        if ((!isOffScreen) && threshold) {
+                //Log.d("HELLO", "fewqgwe");
+                this.visualization = drawOnScreenMarker(map);
 
-        if ((!this.isOnScreenOnly()) && isOffScreen && toVisualize) {
-            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
-            String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
+        } else {
 
-            switch(style) {
-                case "0": //Wedges
-                    this.visualization = drawWedge(map, context);
-                    break;
-                case "1": //Tangible Pointer
+            boolean toVisualize = ((map.getCameraPosition().target.distanceTo(this.getLocationLatLng()))
+                    <= this.rangeToVisualize) || this.rangeToVisualize == 0;
 
-                    this.visualization = drawTangiblePointer(map, context, false);
-                    break;
-                case "2": //Tangible Pointer with Transparency
+            if ((!this.isOnScreenOnly()) && toVisualize) {
+                SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+                String style = sharedPref.getString(VISUALIZATION_TYPE_KEY, "");
 
-                    this.visualization = drawTangiblePointer(map, context, true);
-                    break;
-                case "3": //Wi-Fi Pointer
+                switch (style) {
+                    case "0": //Wedges
+                        this.visualization = drawWedge(map, context);
+                        break;
+                    case "1": //Tangible Pointer
 
-                    this.visualization = drawWiFiPointer(map, context);
+                        this.visualization = drawTangiblePointer(map, context, false);
+                        break;
+                    case "2": //Tangible Pointer with Transparency
+
+                        this.visualization = drawTangiblePointer(map, context, true);
+                        break;
+                    case "3": //Wi-Fi Pointer
+
+                        this.visualization = drawWiFiPointer(map, context);
+                }
             }
         }
 
@@ -239,11 +279,11 @@ public class Landmark {
         return new TangiblePointer(map, this, c, style);
     }
 
-    public static void initOnScreenAnchors(double offset_ratio, int step) {
+    public static void initOnScreenAnchors(MapboxMap map, double offset_ratio, int step) {
         Globals globals = Globals.getInstance();
         if (globals.onScreenAnchorsTodo()) {
             globals.setOnScreenFrameCoords(Landmark.onScreenFrame(
-                    globals.getBboxPolygonCoordinates(), offset_ratio));
+                    SpatialUtils.getBboxPolygonCoordinates(map.getProjection()), offset_ratio));
             List<Landmark.OnScreenAnchor> onScreenAnchors = Landmark.onScreenAnchors(
                     globals.getOnScreenFrameCoords(), step);
             globals.setOnScreenAnchors(onScreenAnchors);
@@ -258,7 +298,7 @@ public class Landmark {
      */
     public LatLng onScreenAnchor(MapboxMap map, double offset_ratio, int step) {
         Globals globals = Globals.getInstance();
-        Landmark.initOnScreenAnchors(offset_ratio, step);
+        Landmark.initOnScreenAnchors(map, offset_ratio, step);
         Projection proj = map.getProjection();
         LatLng userPosition = map.getCameraPosition().target;
         Coordinate[] connection_coordinates = new Coordinate[2];
@@ -267,6 +307,7 @@ public class Landmark {
         LineString connection = new GeometryFactory().createLineString(connection_coordinates);
         Coordinate[] onScreenFrameCoords = globals.getOnScreenFrameCoords();
         Polygon onScreenAnchorPolygon = new GeometryFactory().createPolygon(onScreenFrameCoords);
+        Log.d("onScreenAnchorPolygon", onScreenAnchorPolygon.toString());
         Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon)
                 .getCoordinate();
         int anchor_position = getOnScreenAnchorPosition(intersection);
@@ -311,7 +352,7 @@ public class Landmark {
     }
 
     public static Coordinate[] onScreenFrame(Coordinate[] coordinates, double offset_ratio) {
-        double OFFSET = coordinates[1].x * offset_ratio; // 12% of display's top max pixel
+        double OFFSET = coordinates[1].x * offset_ratio;
         Coordinate[] new_coordinates = new Coordinate[5];
         new_coordinates[0] = coordinates[0];
         new_coordinates[0].x += OFFSET;
@@ -437,13 +478,53 @@ public class Landmark {
 
 
     public boolean isOffScreen(MapboxMap map) {
-        Globals globals = Globals.getInstance();
-        Polygon bbox_polygon = globals.getBboxPolygonJTS();
+        Polygon bbox_polygon = new GeometryFactory().createPolygon(
+                SpatialUtils.getBboxPolygonCoordinates(map.getProjection()));
+
+        Log.d("bbox_isOffScreen", bbox_polygon.toString());
+
         Coordinate sl = latLngToSLCoordinate(this.locationLatLng, map.getProjection());
-        PointF intersection = coordinateToPointF(DistanceOp.nearestPoints(bbox_polygon, this.locationJTS)[0]);
-        LatLng intersectionLatLng = map.getProjection().fromScreenLocation(intersection);
-        return (!bbox_polygon.contains(new GeometryFactory().createPoint(sl)))
-                && this.getLocationLatLng().distanceTo(intersectionLatLng) >= DISTANCE_THRESHOLD;
+        return (!bbox_polygon.contains(new GeometryFactory().createPoint(sl)));
+    }
+
+
+
+
+    private void setDISTANCE_THRESHOLD(int position) {
+        this.DISTANCE_THRESHOLD = 0;
+        switch (position) {
+            case 0: //top
+                this.DISTANCE_THRESHOLD = 10;
+
+            case 1: //right
+                this.DISTANCE_THRESHOLD = 5;
+
+            case 2: //bottom
+                this.DISTANCE_THRESHOLD = 0;
+
+            case 3: //left
+                this.DISTANCE_THRESHOLD = 5;
+
+        }
+    }
+
+    /**
+     * Check on what side of the mapbox the off screen location is
+     * todo: considering intersection crosses a frame edge
+     * @param map
+     * @return
+     */
+    public int positionToLocation (MapboxMap map) {
+        List<LineString> bbox_borders = bboxToLineStringsJTS(map.getProjection().getVisibleRegion());
+        LineString connection = createLineStringFromLatLngs(map.getCameraPosition().target,
+                this.locationLatLng);
+        int position;
+        for (position = 0; position < 4; position++) {
+            if (connection.intersects(bbox_borders.get(position))) {
+                return position;
+            }
+        }
+        return -1;
     }
 
 
