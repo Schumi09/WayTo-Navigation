@@ -19,7 +19,9 @@ import com.mapbox.mapboxsdk.annotations.MarkerOptions;
 import com.mapbox.mapboxsdk.annotations.MarkerView;
 import com.mapbox.mapboxsdk.annotations.MarkerViewOptions;
 import com.mapbox.mapboxsdk.annotations.PolylineOptions;
+import com.mapbox.mapboxsdk.geometry.ILatLng;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.geometry.LatLngBounds;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Projection;
@@ -194,7 +196,6 @@ public class Landmark {
 
         Polygon bbox_polygon = new GeometryFactory().createPolygon(
                 SpatialUtils.getBboxPolygonCoordinates(map.getProjection()));
-        Log.d("bbox_visualize", bbox_polygon.toString());
         Coordinate sl = latLngToSLCoordinate(this.locationLatLng, map.getProjection());
         PointF intersection = coordinateToPointF(DistanceOp.nearestPoints(
                 bbox_polygon, this.locationJTS)[0]);
@@ -480,9 +481,6 @@ public class Landmark {
     public boolean isOffScreen(MapboxMap map) {
         Polygon bbox_polygon = new GeometryFactory().createPolygon(
                 SpatialUtils.getBboxPolygonCoordinates(map.getProjection()));
-
-        Log.d("bbox_isOffScreen", bbox_polygon.toString());
-
         Coordinate sl = latLngToSLCoordinate(this.locationLatLng, map.getProjection());
         return (!bbox_polygon.contains(new GeometryFactory().createPoint(sl)));
     }
@@ -494,17 +492,16 @@ public class Landmark {
         this.DISTANCE_THRESHOLD = 0;
         switch (position) {
             case 0: //top
-                this.DISTANCE_THRESHOLD = 10;
+                this.DISTANCE_THRESHOLD = 25;
 
             case 1: //right
-                this.DISTANCE_THRESHOLD = 5;
+                this.DISTANCE_THRESHOLD = 15;
 
             case 2: //bottom
                 this.DISTANCE_THRESHOLD = 0;
 
             case 3: //left
-                this.DISTANCE_THRESHOLD = 5;
-
+                this.DISTANCE_THRESHOLD = 15;
         }
     }
 
