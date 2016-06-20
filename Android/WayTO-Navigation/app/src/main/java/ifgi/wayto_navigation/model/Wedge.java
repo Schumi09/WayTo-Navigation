@@ -3,6 +3,7 @@ package ifgi.wayto_navigation.model;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PointF;
+import android.util.Log;
 
 import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
@@ -49,9 +50,9 @@ public class Wedge extends Visualization{
     private Globals globals;
     private final LatLng onScreenAnchor;
 
-    private static int INTRUSION_CONSTANT = 60;
-    private static double APERTURE_CONSTANT = 0.15;
-    private static int LEG_INCREASE = 20; //meters
+    private static int INTRUSION_CONSTANT = 20;
+    private static double APERTURE_CONSTANT = 0.1;
+    private static int LEG_INCREASE = 50; //px
 
     private static double OFFSET_RATIO = 0.0;
     private static int STEP = 90;
@@ -86,10 +87,10 @@ public class Wedge extends Visualization{
                 SpatialUtils.pointF2Coordinate(
                         map.getProjection().toScreenLocation(heading_coord)))); //in pixel
         double leg = calculateLeg(distanceToScreen);
-        double ratio = leg / distanceToScreen;
+        double ratio = (leg + LEG_INCREASE) / distanceToScreen;
         double true_distance = heading_coord.distanceTo(this.landmark.getLocationLatLng());
 
-        double distance = (ratio * true_distance) + LEG_INCREASE;
+        double distance = (ratio * true_distance);
         //double map_orientation = map.getCameraPosition().bearing;
         double heading = SpatialUtils.bearing(landmark.getLocationLatLng(), heading_coord);
                 //- map.getCameraPosition().bearing;
