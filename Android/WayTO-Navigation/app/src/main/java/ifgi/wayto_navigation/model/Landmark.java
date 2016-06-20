@@ -188,7 +188,7 @@ public class Landmark {
 
     public void visualize(MapboxMap map, Context context) {
 
-        Log.d("Landmark Name", this.getName());
+        Log.d(this.getName(), name);
         this.update(map);
 
         removeVisualization(map);
@@ -196,6 +196,7 @@ public class Landmark {
 
         Polygon bbox_polygon = new GeometryFactory().createPolygon(
                 SpatialUtils.getBboxPolygonCoordinates(map.getProjection()));
+
         Coordinate sl = latLngToSLCoordinate(this.locationLatLng, map.getProjection());
         PointF intersection = coordinateToPointF(DistanceOp.nearestPoints(
                 bbox_polygon, this.locationJTS)[0]);
@@ -308,7 +309,6 @@ public class Landmark {
         LineString connection = new GeometryFactory().createLineString(connection_coordinates);
         Coordinate[] onScreenFrameCoords = globals.getOnScreenFrameCoords();
         Polygon onScreenAnchorPolygon = new GeometryFactory().createPolygon(onScreenFrameCoords);
-        Log.d("onScreenAnchorPolygon", onScreenAnchorPolygon.toString());
         Coordinate intersection = customIntersectionPoint(connection, onScreenAnchorPolygon)
                 .getCoordinate();
         int anchor_position = getOnScreenAnchorPosition(intersection);
@@ -401,42 +401,56 @@ public class Landmark {
         }
     }
 
+    /**
+     * Returns a list of OnScreenAnchor points that have a given space on a frame
+     * @param coordinates screen frame as list of coordinates
+     * @param space gap between anchor points in pixels
+     * @return
+     */
     public static List<OnScreenAnchor> onScreenAnchors(Coordinate[] coordinates, double space) {
         List<OnScreenAnchor> anchors = new ArrayList<>();
 
-        double long_dist = coordinates[1].x - coordinates[0].x;
-        int long_number = (int) Math.ceil(long_dist / space);
-        double short_dist = coordinates[2].y - coordinates[1].y;
-        int short_number = (int) Math.ceil(short_dist / space);
+        //round values to fix different lengths for same resolution
+        coordinates[0] = new Coordinate(Math.round(coordinates[0].x), Math.round(coordinates[0].y));
+        coordinates[1] = new Coordinate(Math.round(coordinates[1].x), Math.round(coordinates[1].y));
+        coordinates[2] = new Coordinate(Math.round(coordinates[2].x), Math.round(coordinates[2].y));
+        coordinates[3] = new Coordinate(Math.round(coordinates[3].x), Math.round(coordinates[3].y));
+        coordinates[4] = new Coordinate(Math.round(coordinates[4].x), Math.round(coordinates[4].y));
+
+
+        int long_dist = (int) (coordinates[1].x - coordinates[0].x);
+        int long_number = (int) Math.floor(long_dist / space);
+        double long_space_increase = (long_dist % space) / long_number; //correct the space steps
+        int short_dist = (int) (coordinates[2].y - coordinates[1].y);
+        int short_number = (int) Math.floor(short_dist / space); //correct the space steps
+        double short_space_increase = (short_dist % space) / short_number;
 
         //long top:
-        double long_x = coordinates[0].x;
+        double long_x = coordinates[0].x; //first anchor point top left
         anchors.add(new OnScreenAnchor(coordinates[0]));
-        for (int i=1; i<long_number; i++) {
-            long_x += space;
+        for (int i=1; i<=long_number; i++) {
+            long_x += space + long_space_increase;
             anchors.add(new OnScreenAnchor(new Coordinate(long_x, coordinates[1].y)));
         }
         //short right:
         double short_y = coordinates[1].y;
-        //anchors.add(new onScreenAnchor(anchors.get(anchors.size() - 1).getCoordinate()));
-        for (int i=1; i<short_number; i++) {
-            short_y += space;
+        for (int i=1; i<=short_number; i++) {
+            short_y += space + short_space_increase;
             anchors.add(new OnScreenAnchor(new Coordinate(long_x , short_y)));
         }
 
         //long bottom:
-        //anchors.add(new onScreenAnchor(new Coordinate(long_x, short_y));
-        for (int i=1; i<long_number; i++) {
-            long_x -= space;
+        for (int i=1; i<=long_number; i++) {
+            long_x -= space + long_space_increase;
             anchors.add(new OnScreenAnchor(new Coordinate(long_x, short_y)));
         }
 
         //short left:
-        //anchors.add(new onScreenAnchor(new Coordinate(long_x, short_y)));
         for (int i=1; i<short_number-1; i++) {
-            short_y -= space;
+            short_y -= space + short_space_increase;
             anchors.add(new OnScreenAnchor(new Coordinate(long_x, short_y)));
         }
+        anchors.add(anchors.get(0)); //take first anchor point to form a closed linestring
 
         return anchors;
     }
