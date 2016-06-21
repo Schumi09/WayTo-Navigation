@@ -2,7 +2,6 @@ package ifgi.wayto_navigation.model;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
@@ -11,18 +10,11 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Gravity;
 
-import com.google.maps.android.SphericalUtil;
 import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.IconFactory;
-import com.mapbox.mapboxsdk.annotations.MarkerOptions;
-import com.mapbox.mapboxsdk.annotations.MarkerView;
 import com.mapbox.mapboxsdk.annotations.MarkerViewOptions;
-import com.mapbox.mapboxsdk.annotations.PolylineOptions;
-import com.mapbox.mapboxsdk.geometry.ILatLng;
 import com.mapbox.mapboxsdk.geometry.LatLng;
-import com.mapbox.mapboxsdk.geometry.LatLngBounds;
-import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Projection;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -33,19 +25,15 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import com.vividsolutions.jts.operation.distance.DistanceOp;
-import com.vividsolutions.jts.operation.linemerge.LineMerger;
-import com.vividsolutions.jts.util.GeometricShapeFactory;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
-import ifgi.wayto_navigation.utils.ImageUtils;
 import ifgi.wayto_navigation.R;
+import ifgi.wayto_navigation.utils.ImageUtils;
 import ifgi.wayto_navigation.utils.SpatialUtils;
 
 import static ifgi.wayto_navigation.utils.SpatialUtils.bboxToLineStringsJTS;
-import static ifgi.wayto_navigation.utils.SpatialUtils.calculateMidPoint;
 import static ifgi.wayto_navigation.utils.SpatialUtils.coordinateToPointF;
 import static ifgi.wayto_navigation.utils.SpatialUtils.createLineStringFromLatLngs;
 import static ifgi.wayto_navigation.utils.SpatialUtils.latLngToSLCoordinate;
@@ -65,7 +53,6 @@ public class Landmark {
     private PointF locationScreen;
     private Icon off_screen_icon;
     private Icon on_screen_icon;
-    private MarkerViewOptions on_screen_markerOptions;
     private Visualization visualization;
 
 
@@ -96,10 +83,6 @@ public class Landmark {
         }
         this.rangeToVisualize = range;
         this.on_screen_icon = createOnScreenMarkerIcon(context);
-        this.on_screen_markerOptions = new MarkerViewOptions()
-                .position(this.getLocationLatLng())
-                .icon(this.on_screen_icon)
-                .anchor(0.5f, 1);
     }
 
     private void update(MapboxMap map) {
@@ -252,7 +235,10 @@ public class Landmark {
 
         public onScreen(MapboxMap mapboxMap, Landmark landmark) {
             this.visualization = new ArrayList<>();
-            this.visualization.add(mapboxMap.addMarker(landmark.getOn_screen_markerOptions()));
+            this.visualization.add(mapboxMap.addMarker(new MarkerViewOptions()
+                    .position(landmark.getLocationLatLng())
+                    .icon(landmark.on_screen_icon)
+                    .anchor(0.5f, 1.0f)));
         }
 
         @Override
@@ -322,10 +308,6 @@ public class Landmark {
         return value;
     }
 
-
-    private MarkerViewOptions getOn_screen_markerOptions() {
-            return this.on_screen_markerOptions;
-    }
 
     public double distanceToScreen(MapboxMap map, LatLng intersection) {
         PointF landmark_sl = map.getProjection().toScreenLocation(this.locationLatLng);
