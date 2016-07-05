@@ -450,16 +450,17 @@ public class Landmark {
             }
         }
 
-        if (points.get(position).isFree()) {
+        if (points.get(position).isFree() && points.get(previousIndex(position, points.size())).isFree()) {
             return position;
         } else {
             position = positionIndex(position, points.size());
-            while (!points.get(position).isFree()) {
+            while (!(points.get(position).isFree() && points.get(previousIndex(position, points.size())).isFree()))  {
                 position = positionIndex(position, points.size());
             }
             return position;
         }
     }
+
 
     private static int positionIndex(int position, int max) {
         int i;
@@ -472,6 +473,15 @@ public class Landmark {
         return i;
     }
 
+    private static int previousIndex(int position, int max) {
+        int index;
+        if (position != 0) {
+            index = position - 1;
+        }else {
+            index = max - 1;
+        }
+        return index;
+    }
 
 
     public boolean isOffScreen(MapboxMap map) {
