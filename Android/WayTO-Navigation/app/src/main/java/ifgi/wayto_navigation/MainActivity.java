@@ -30,7 +30,6 @@ import android.widget.Toast;
 
 import com.hs.gpxparser.GPXParser;
 import com.hs.gpxparser.modal.GPX;
-import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
@@ -82,8 +81,6 @@ import ifgi.wayto_navigation.utils.SpatialUtils;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-
-import static ifgi.wayto_navigation.utils.SpatialUtils.SLCoordinateToLatLng;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -155,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
     private Handler frameHandler;
     private Runnable frameRunnable;
     private boolean frameStatus;
-    private static final int FRAME_UPDATE_INTERVAL = 150; //ms
+    private static final int FRAME_UPDATE_INTERVAL = 220; //ms
 
 
     @Override
@@ -665,10 +662,13 @@ public class MainActivity extends AppCompatActivity {
     private void visualizeBorderFrame() {
         Projection projection = mMapboxMap.getProjection();
         VisibleRegion bbox = projection.getVisibleRegion();
+        double overflow = 250; //overflow in px to avoid empty space close to frame
         double width = 0.11 * (
                 SpatialUtils.pointF2Coordinate(projection.toScreenLocation(bbox.farLeft))
                         .distance(SpatialUtils.pointF2Coordinate(
                                 projection.toScreenLocation(bbox.farRight))));
+        width += overflow;
+
         List<Polygon> previous_frame = new ArrayList<>();
         if (frame != null) {
             previous_frame = frame;
@@ -677,9 +677,17 @@ public class MainActivity extends AppCompatActivity {
         List<PolygonOptions> frameOptions = new ArrayList<>();
 
         PointF farLeft = projection.toScreenLocation(bbox.farLeft);
+        farLeft.x -= overflow;
+        farLeft.y -= overflow;
         PointF farRight = projection.toScreenLocation(bbox.farRight);
+        farRight.x += overflow;
+        farRight.y -= overflow;
         PointF nearRight = projection.toScreenLocation(bbox.nearRight);
+        nearRight.x += overflow;
+        nearRight.y += overflow;
         PointF nearLeft = projection.toScreenLocation(bbox.nearLeft);
+        nearLeft.x -= overflow;
+        nearLeft.y += overflow;
 
         List<LatLng> top = new ArrayList<>();
 
@@ -707,8 +715,8 @@ public class MainActivity extends AppCompatActivity {
         PointF bottom_left_right_p = new PointF((float) (nearLeft.x + width), (float) (nearLeft.y - width));
         LatLng bottom_left_right = projection.fromScreenLocation(bottom_left_right_p);
 
-        top.add(bbox.farLeft);
-        top.add(bbox.farRight);
+        top.add(projection.fromScreenLocation(farLeft));
+        top.add(projection.fromScreenLocation(farRight));
 
         top.add(top_right_right);
         top.add(top_left_left);
@@ -724,8 +732,8 @@ public class MainActivity extends AppCompatActivity {
         List<LatLng> bottom = new ArrayList<>();
         bottom.add(bottom_left_left);
         bottom.add(bottom_right_right);
-        bottom.add(bbox.nearRight);
-        bottom.add(bbox.nearLeft);
+        bottom.add(projection.fromScreenLocation(nearRight));
+        bottom.add(projection.fromScreenLocation(nearLeft));
 
         List<LatLng> left = new ArrayList<>();
         bottom.add(top_left_left);
@@ -737,13 +745,6 @@ public class MainActivity extends AppCompatActivity {
         frameOptions.add(new PolygonOptions().addAll(right).alpha(0.1f));
         frameOptions.add(new PolygonOptions().addAll(bottom).alpha(0.1f));
         frameOptions.add(new PolygonOptions().addAll(left).alpha(0.1f));
-
-        List<LatLng> outside = new ArrayList<>();
-        outside.add(bbox.farRight);
-        outside.add(bbox.nearRight);
-        outside.add(bbox.nearLeft);
-        outside.add(bbox.farLeft);
-        frameOptions.add(new PolygonOptions().addAll(outside).alpha(0.1f));
 
         frame = (mMapboxMap.addPolygons(frameOptions));
         if (previous_frame != null) mMapboxMap.removeAnnotations(previous_frame);
