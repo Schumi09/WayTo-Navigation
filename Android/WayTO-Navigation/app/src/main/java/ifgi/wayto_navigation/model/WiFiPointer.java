@@ -31,7 +31,7 @@ public class WiFiPointer extends Visualization{
     private Context context;
     private static int step = 500; //meter
 
-    private static double OFFSET_RATIO = 0.12;
+    private static double OFFSET_RATIO = 0.075;
     private static int STEP = 90;
 
     public WiFiPointer(MapboxMap map, Landmark landmark, Context context) {
@@ -57,12 +57,14 @@ public class WiFiPointer extends Visualization{
                 this.onScreenAnchor, this.landmark.getLocationLatLng());
         angle = (float) (angle - map.getCameraPosition().bearing);
         double distance = this.landmark.getLocationLatLng().distanceTo(this.onScreenAnchor);
-        int arrow_number = (int) (distance / this.step);
-        arrow_number++;
-        if (arrow_number > 10) { arrow_number = 10;}
+        int arrow_number = 1;
+        if (distance >
+                map.getCameraPosition().target
+                        .distanceTo(map.getProjection().getVisibleRegion().farLeft) * 2) {
+            arrow_number = 2;
+        }
         String drawable_name = "landmark_wifi_" + arrow_number;
         int drawable_id = ImageUtils.getIconID(drawable_name, this.context);
-        Log.d("ArrowNUMBER", drawable_name);
         Drawable[] layers = new Drawable[2];
         layers[0] = ImageUtils.rotateIconToDrawable(this.landmark.getOff_screen_icon(), -angle);
         layers[1] = this.context.getDrawable(drawable_id);
