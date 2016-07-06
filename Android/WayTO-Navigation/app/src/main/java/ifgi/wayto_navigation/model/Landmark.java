@@ -82,7 +82,7 @@ public class Landmark {
             this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
         }
         this.rangeToVisualize = range;
-        this.on_screen_icon = createOnScreenMarkerIcon(context);
+        this.on_screen_icon = this.off_screen_icon;
     }
 
     private void update(MapboxMap map) {
@@ -129,23 +129,9 @@ public class Landmark {
         return IconFactory.getInstance(context).fromDrawable(layerDrawable.getCurrent());
     }
 
-    private Icon createOnScreenMarkerIcon(Context context) {
-        LayerDrawable layerDrawable = new LayerDrawable(new Drawable[0]);
-        layerDrawable.addLayer(context.getDrawable(R.drawable.landmark_on_screen));
-        layerDrawable.addLayer(context.getDrawable(ImageUtils.getIconID(this.name, context)));
-        int icon_layer_index = layerDrawable.getNumberOfLayers() - 1;
-        layerDrawable.setLayerGravity(icon_layer_index, Gravity.CENTER);
-        layerDrawable.setLayerInsetBottom(icon_layer_index, ImageUtils.dpToPx(context, 10));
-        layerDrawable.setLayerHeight(icon_layer_index, ImageUtils.dpToPx(context, 20));
-        layerDrawable.setLayerWidth(icon_layer_index, ImageUtils.dpToPx(context, 20));
-        Drawable drawable = layerDrawable.getCurrent();
-        return IconFactory.getInstance(context).fromDrawable(drawable);
-    }
-
     public String getDescription() {
         return description;
     }
-
 
     public String getName() {
         return name;
@@ -175,7 +161,6 @@ public class Landmark {
         this.update(map);
 
         removeVisualization(map);
-
 
         Polygon bbox_polygon = new GeometryFactory().createPolygon(
                 SpatialUtils.getBboxPolygonCoordinates(map.getProjection()));
@@ -238,7 +223,7 @@ public class Landmark {
             this.visualization.add(mapboxMap.addMarker(new MarkerViewOptions()
                     .position(landmark.getLocationLatLng())
                     .icon(landmark.on_screen_icon)
-                    .anchor(0.5f, 1.0f)));
+                    .anchor(0.5f, 0.5f)));
         }
 
         @Override
