@@ -78,11 +78,9 @@ public class Landmark {
                 PrecisionModel.FLOATING), 4326).createPoint(new Coordinate(lat, lon));
         this.locationLatLng = new LatLng(lat, lon);
         this.isOnScreenOnly = isOnScreenOnly;
-        if (!isOnScreenOnly) {
-            this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
-        }
-        this.rangeToVisualize = range;
+        this.off_screen_icon = this.setIcon(context);
         this.on_screen_icon = this.off_screen_icon;
+        this.rangeToVisualize = range;
     }
 
     private void update(MapboxMap map) {
@@ -114,12 +112,12 @@ public class Landmark {
     public void setOnScreenOnly(boolean onScreenOnly, Context context) {
         isOnScreenOnly = onScreenOnly;
         if (isOnScreenOnly) {
-            this.off_screen_icon = setBasicOffScreenMarkerIcon(context);
+            this.off_screen_icon = setIcon(context);
         }
     }
 
-    public Icon setBasicOffScreenMarkerIcon(Context context) {
-        Drawable drawable_background = context.getDrawable(R.drawable.landmark_off_screen);
+    public Icon setIcon(Context context) {
+        Drawable drawable_background = context.getDrawable(R.drawable.landmark_circle);
         LayerDrawable layerDrawable = new LayerDrawable(new Drawable[0]);
         layerDrawable.addLayer(drawable_background);
         layerDrawable.addLayer(context.getDrawable(ImageUtils.getIconID(this.name, context)));
