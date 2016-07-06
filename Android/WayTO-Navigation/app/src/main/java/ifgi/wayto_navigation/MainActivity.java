@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.PointF;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,6 +30,7 @@ import android.widget.Toast;
 
 import com.hs.gpxparser.GPXParser;
 import com.hs.gpxparser.modal.GPX;
+import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.Icon;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
@@ -40,6 +42,7 @@ import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.constants.MyBearingTracking;
 import com.mapbox.mapboxsdk.constants.MyLocationTracking;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.geometry.VisibleRegion;
 import com.mapbox.mapboxsdk.location.LocationServices;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
@@ -75,6 +78,7 @@ import java.util.Locale;
 import ifgi.wayto_navigation.model.Globals;
 import ifgi.wayto_navigation.model.Landmark;
 import ifgi.wayto_navigation.utils.ImageUtils;
+import ifgi.wayto_navigation.utils.SpatialUtils;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -147,6 +151,12 @@ public class MainActivity extends AppCompatActivity {
     private String[] PERMISSIONS;
     private static int PERMISSION_ALL = 1;
 
+    private static List<Polygon> frame;
+    private Handler frameHandler;
+    private Runnable frameRunnable;
+    private boolean frameStatus;
+    private static final int FRAME_UPDATE_INTERVAL = 150; //ms
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,6 +173,7 @@ public class MainActivity extends AppCompatActivity {
         myToolbar.setLogo(R.drawable.logo_wayto);
         setSupportActionBar(myToolbar);
         actionBar = getSupportActionBar();
+        frameHandler = new Handler();
 
         //todo: remove when included in MAS
         Locale locale = new Locale("en_US");
@@ -233,10 +244,19 @@ public class MainActivity extends AppCompatActivity {
                 mMapboxMap.getTrackingSettings().setMyLocationTrackingMode(MyLocationTracking.TRACKING_FOLLOW);
                 mMapboxMap.getTrackingSettings().setMyBearingTrackingMode(MyBearingTracking.GPS);
 
+                visualizeBorderFrame();
+                frameRunnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        frameStatus = true;
+                        visualizeBorderFrame();
+                        frameHandler.postDelayed(this, FRAME_UPDATE_INTERVAL);
+                    }
+                };
+                frameHandler.postDelayed(frameRunnable, FRAME_UPDATE_INTERVAL);
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
                     @Override
                     public void onCameraChange(CameraPosition position) {
-                        Log.d("Bearing Map", "" + mMapboxMap.getCameraPosition().bearing);
                         landmarkVisualization();
                     }
                 });
@@ -349,11 +369,9 @@ public class MainActivity extends AppCompatActivity {
         //landmarkVisualization();
     }
 
-    Polygon onscreen;
     private void landmarkVisualization() {
-        if (mMapboxMap != null && mCurrentLocation != null) {
+        if (mMapboxMap != null) {
             globals.setOnScreenAnchorsTodo(true);
-
             for (int i = 0; i < landmarks.size(); i++) {
                 Landmark l = landmarks.get(i);
                 l.visualize(mMapboxMap, getApplicationContext());
@@ -644,6 +662,93 @@ public class MainActivity extends AppCompatActivity {
                 && !hasPermissions(this.getApplicationContext(), PERMISSIONS);
     }
 
+    private void visualizeBorderFrame() {
+        Projection projection = mMapboxMap.getProjection();
+        VisibleRegion bbox = projection.getVisibleRegion();
+        double width = 0.11 * (
+                SpatialUtils.pointF2Coordinate(projection.toScreenLocation(bbox.farLeft))
+                        .distance(SpatialUtils.pointF2Coordinate(
+                                projection.toScreenLocation(bbox.farRight))));
+        List<Polygon> previous_frame = new ArrayList<>();
+        if (frame != null) {
+            previous_frame = frame;
+        }
+        //frame = new ArrayList<>();
+        List<PolygonOptions> frameOptions = new ArrayList<>();
+
+        PointF farLeft = projection.toScreenLocation(bbox.farLeft);
+        PointF farRight = projection.toScreenLocation(bbox.farRight);
+        PointF nearRight = projection.toScreenLocation(bbox.nearRight);
+        PointF nearLeft = projection.toScreenLocation(bbox.nearLeft);
+
+        List<LatLng> top = new ArrayList<>();
+
+        PointF top_left_left_p = new PointF(farLeft.x, (float) (farLeft.y + width));
+        LatLng top_left_left = projection.fromScreenLocation(top_left_left_p);
+
+        PointF top_left_right_p = new PointF((float) (farLeft.x + width), (float) (farLeft.y + width));
+        LatLng top_left_right = projection.fromScreenLocation(top_left_right_p);
+
+        PointF top_right_right_p = new PointF(farRight.x, (float) (farRight.y + width));
+        LatLng top_right_right = projection.fromScreenLocation(top_right_right_p);
+
+        PointF top_right_left_p = new PointF((float) (farRight.x - width), (float) (farRight.y + width));
+        LatLng top_right_left = projection.fromScreenLocation(top_right_left_p);
+
+        PointF bottom_right_right_p = new PointF(nearRight.x, (float) (nearRight.y - width));
+        LatLng bottom_right_right = projection.fromScreenLocation(bottom_right_right_p);
+
+        PointF bottom_right_left_p = new PointF((float) (nearRight.x - width), (float) (nearRight.y - width));
+        LatLng bottom_right_left = projection.fromScreenLocation(bottom_right_left_p);
+
+        PointF bottom_left_left_p = new PointF(nearLeft.x, (float) (nearLeft.y - width));
+        LatLng bottom_left_left = projection.fromScreenLocation(bottom_left_left_p);
+
+        PointF bottom_left_right_p = new PointF((float) (nearLeft.x + width), (float) (nearLeft.y - width));
+        LatLng bottom_left_right = projection.fromScreenLocation(bottom_left_right_p);
+
+        top.add(bbox.farLeft);
+        top.add(bbox.farRight);
+
+        top.add(top_right_right);
+        top.add(top_left_left);
+
+
+        List<LatLng> right = new ArrayList<>();
+        right.add(top_right_left);
+        right.add(top_right_right);
+
+        right.add(bottom_right_right);
+        right.add(bottom_right_left);
+
+        List<LatLng> bottom = new ArrayList<>();
+        bottom.add(bottom_left_left);
+        bottom.add(bottom_right_right);
+        bottom.add(bbox.nearRight);
+        bottom.add(bbox.nearLeft);
+
+        List<LatLng> left = new ArrayList<>();
+        bottom.add(top_left_left);
+        bottom.add(top_left_right);
+        bottom.add(bottom_left_right);
+        bottom.add(bottom_left_left);
+
+        frameOptions.add(new PolygonOptions().addAll(top).alpha(0.1f));
+        frameOptions.add(new PolygonOptions().addAll(right).alpha(0.1f));
+        frameOptions.add(new PolygonOptions().addAll(bottom).alpha(0.1f));
+        frameOptions.add(new PolygonOptions().addAll(left).alpha(0.1f));
+
+        List<LatLng> outside = new ArrayList<>();
+        outside.add(bbox.farRight);
+        outside.add(bbox.nearRight);
+        outside.add(bbox.nearLeft);
+        outside.add(bbox.farLeft);
+        frameOptions.add(new PolygonOptions().addAll(outside).alpha(0.1f));
+
+        frame = (mMapboxMap.addPolygons(frameOptions));
+        if (previous_frame != null) mMapboxMap.removeAnnotations(previous_frame);
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -652,12 +757,25 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        if (frameStatus) {
+            frameHandler.removeCallbacks(frameRunnable);
+            if (mMapboxMap != null) {
+                mMapboxMap.removeAnnotations(frame);
+            }
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        if (frameStatus) {
+            frameHandler.removeCallbacks(frameRunnable);
+            if (mMapboxMap != null) {
+                mMapboxMap.removeAnnotations(frame);
+            }
+        }
         mapView.onPause();
+
     }
 
     @Override
@@ -677,6 +795,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (frameStatus) {
+            frameHandler.removeCallbacks(frameRunnable);
+            if (mMapboxMap != null) {
+                mMapboxMap.removeAnnotations(frame);
+            }
+        }
         mapView.onDestroy();
     }
 
