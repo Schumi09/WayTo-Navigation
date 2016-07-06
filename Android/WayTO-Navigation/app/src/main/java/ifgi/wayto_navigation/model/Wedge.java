@@ -51,8 +51,8 @@ public class Wedge extends Visualization{
     private final LatLng onScreenAnchor;
 
     private static int INTRUSION_CONSTANT = 20;
-    private static double APERTURE_CONSTANT = 0.1;
-    private static int LEG_INCREASE = 50; //px
+    private static double APERTURE_CONSTANT = 0.15;
+    private static int LEG_INCREASE = 70; //px
 
     private static double OFFSET_RATIO = 0.0;
     private static int STEP = 90;
