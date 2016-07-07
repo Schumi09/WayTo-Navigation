@@ -659,6 +659,12 @@ public class MainActivity extends AppCompatActivity {
                 && !hasPermissions(this.getApplicationContext(), PERMISSIONS);
     }
 
+    /**
+     * Drawing a transparent border frame to make distuingishing between on screen and off screen
+     * landmarks easier
+     * Setting up two polygons as Mapbox SDK does not support Polygons with holes yet
+     * todo: update when above is possible with the SDK
+     */
     private void visualizeBorderFrame() {
         Projection projection = mMapboxMap.getProjection();
         VisibleRegion bbox = projection.getVisibleRegion();
@@ -673,8 +679,6 @@ public class MainActivity extends AppCompatActivity {
         if (frame != null) {
             previous_frame = frame;
         }
-        //frame = new ArrayList<>();
-        List<PolygonOptions> frameOptions = new ArrayList<>();
 
         PointF farLeft = projection.toScreenLocation(bbox.farLeft);
         farLeft.x -= overflow;
@@ -689,8 +693,6 @@ public class MainActivity extends AppCompatActivity {
         nearLeft.x -= overflow;
         nearLeft.y += overflow;
 
-        List<LatLng> top = new ArrayList<>();
-
         PointF top_left_left_p = new PointF(farLeft.x, (float) (farLeft.y + width));
         LatLng top_left_left = projection.fromScreenLocation(top_left_left_p);
 
@@ -703,48 +705,41 @@ public class MainActivity extends AppCompatActivity {
         PointF top_right_left_p = new PointF((float) (farRight.x - width), (float) (farRight.y + width));
         LatLng top_right_left = projection.fromScreenLocation(top_right_left_p);
 
+        /**
         PointF bottom_right_right_p = new PointF(nearRight.x, (float) (nearRight.y - width));
-        LatLng bottom_right_right = projection.fromScreenLocation(bottom_right_right_p);
+        LatLng bottom_right_right = projection.fromScreenLocation(bottom_right_right_p);*/
 
         PointF bottom_right_left_p = new PointF((float) (nearRight.x - width), (float) (nearRight.y - width));
         LatLng bottom_right_left = projection.fromScreenLocation(bottom_right_left_p);
 
+        /**
         PointF bottom_left_left_p = new PointF(nearLeft.x, (float) (nearLeft.y - width));
-        LatLng bottom_left_left = projection.fromScreenLocation(bottom_left_left_p);
+        LatLng bottom_left_left = projection.fromScreenLocation(bottom_left_left_p);*/
 
         PointF bottom_left_right_p = new PointF((float) (nearLeft.x + width), (float) (nearLeft.y - width));
         LatLng bottom_left_right = projection.fromScreenLocation(bottom_left_right_p);
 
+
+        List<LatLng> top = new ArrayList<>();
         top.add(projection.fromScreenLocation(farLeft));
         top.add(projection.fromScreenLocation(farRight));
-
         top.add(top_right_right);
         top.add(top_left_left);
 
-
-        List<LatLng> right = new ArrayList<>();
-        right.add(top_right_left);
-        right.add(top_right_right);
-
-        right.add(bottom_right_right);
-        right.add(bottom_right_left);
-
         List<LatLng> bottom = new ArrayList<>();
-        bottom.add(bottom_left_left);
-        bottom.add(bottom_right_right);
-        bottom.add(projection.fromScreenLocation(nearRight));
-        bottom.add(projection.fromScreenLocation(nearLeft));
-
-        List<LatLng> left = new ArrayList<>();
         bottom.add(top_left_left);
         bottom.add(top_left_right);
         bottom.add(bottom_left_right);
-        bottom.add(bottom_left_left);
+        bottom.add(bottom_right_left);
+        bottom.add(top_right_left);
+        bottom.add(top_right_right);
+        bottom.add(top_right_right);
+        bottom.add(projection.fromScreenLocation(nearRight));
+        bottom.add(projection.fromScreenLocation(nearLeft));
 
+        List<PolygonOptions> frameOptions = new ArrayList<>();
         frameOptions.add(new PolygonOptions().addAll(top).alpha(0.1f));
-        frameOptions.add(new PolygonOptions().addAll(right).alpha(0.1f));
         frameOptions.add(new PolygonOptions().addAll(bottom).alpha(0.1f));
-        frameOptions.add(new PolygonOptions().addAll(left).alpha(0.1f));
 
         frame = (mMapboxMap.addPolygons(frameOptions));
         if (previous_frame != null) mMapboxMap.removeAnnotations(previous_frame);
