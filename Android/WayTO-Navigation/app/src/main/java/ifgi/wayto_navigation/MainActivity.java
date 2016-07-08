@@ -100,6 +100,9 @@ public class MainActivity extends AppCompatActivity {
 
     private List<Location> simulation_locations;
     private boolean simulate;
+    private Handler simulationHandler;
+    private boolean isSimulationRunning = false;
+
 
 
     protected static final String TAG = "WayTO-Navigation";
@@ -400,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
                     // Print some info about the route
                     currentRoute = response.body().getRoutes().get(0);
                     drawRoute(currentRoute);
-                    if(simulate) {
+                    if(simulate && !isSimulationRunning) {
                         Handler handler = new Handler();
                         handler.postDelayed(new Runnable() {
                             @Override
@@ -589,8 +592,8 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void mockLocations(final List<Location> locations) {
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(new Runnable() {
+        simulationHandler = new Handler(Looper.getMainLooper());
+        simulationHandler.post(new Runnable() {
             @Override
             public void run() {
                 //Looper.prepare();
@@ -606,14 +609,13 @@ public class MainActivity extends AppCompatActivity {
                     Runnable runnable = new Runnable() {
                         @Override
                         public void run() {
+                            isSimulationRunning = true;
                             mock(current);
                         }
                     };
                     long diff = current.getTime() - first.getTime();
-                    Handler h = new Handler();
-                    h.postDelayed(runnable, diff);
+                    simulationHandler.postDelayed(runnable, diff);
                 }
-                //Looper.loop();
             }
         });
     }
