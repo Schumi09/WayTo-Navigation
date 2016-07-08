@@ -244,16 +244,8 @@ public class MainActivity extends AppCompatActivity {
                 mMapboxMap.getTrackingSettings().setMyLocationTrackingMode(MyLocationTracking.TRACKING_FOLLOW);
                 mMapboxMap.getTrackingSettings().setMyBearingTrackingMode(MyBearingTracking.GPS);
 
-                visualizeBorderFrame();
-                frameRunnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        frameStatus = true;
-                        visualizeBorderFrame();
-                        frameHandler.postDelayed(this, FRAME_UPDATE_INTERVAL);
-                    }
-                };
-                frameHandler.postDelayed(frameRunnable, FRAME_UPDATE_INTERVAL);
+                frameHandler.post(visualizeBorderFrame);
+
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
                     @Override
                     public void onCameraChange(CameraPosition position) {
@@ -667,85 +659,92 @@ public class MainActivity extends AppCompatActivity {
      * Setting up two polygons as Mapbox SDK does not support Polygons with holes yet
      * todo: update when above is possible with the SDK
      */
-    private void visualizeBorderFrame() {
-        Projection projection = mMapboxMap.getProjection();
-        VisibleRegion bbox = projection.getVisibleRegion();
-        double overflow = 250; //overflow in px to avoid empty space close to frame
-        double width = 0.11 * (
-                SpatialUtils.pointF2Coordinate(projection.toScreenLocation(bbox.farLeft))
-                        .distance(SpatialUtils.pointF2Coordinate(
-                                projection.toScreenLocation(bbox.farRight))));
-        width += overflow;
+    private Runnable visualizeBorderFrame = new Runnable() {
 
-        List<Polygon> previous_frame = new ArrayList<>();
-        if (frame != null) {
-            previous_frame = frame;
+        @Override
+        public void run() {
+            frameStatus = true;
+
+            Projection projection = mMapboxMap.getProjection();
+            VisibleRegion bbox = projection.getVisibleRegion();
+            double overflow = 250; //overflow in px to avoid empty space close to frame
+            double width = 0.11 * (
+                    SpatialUtils.pointF2Coordinate(projection.toScreenLocation(bbox.farLeft))
+                            .distance(SpatialUtils.pointF2Coordinate(
+                                    projection.toScreenLocation(bbox.farRight))));
+            width += overflow;
+
+            List<Polygon> previous_frame = new ArrayList<>();
+            if (frame != null) {
+                previous_frame = frame;
+            }
+
+            PointF farLeft = projection.toScreenLocation(bbox.farLeft);
+            farLeft.x -= overflow;
+            farLeft.y -= overflow;
+            PointF farRight = projection.toScreenLocation(bbox.farRight);
+            farRight.x += overflow;
+            farRight.y -= overflow;
+            PointF nearRight = projection.toScreenLocation(bbox.nearRight);
+            nearRight.x += overflow;
+            nearRight.y += overflow;
+            PointF nearLeft = projection.toScreenLocation(bbox.nearLeft);
+            nearLeft.x -= overflow;
+            nearLeft.y += overflow;
+
+            PointF top_left_left_p = new PointF(farLeft.x, (float) (farLeft.y + width));
+            LatLng top_left_left = projection.fromScreenLocation(top_left_left_p);
+
+            PointF top_left_right_p = new PointF((float) (farLeft.x + width), (float) (farLeft.y + width));
+            LatLng top_left_right = projection.fromScreenLocation(top_left_right_p);
+
+            PointF top_right_right_p = new PointF(farRight.x, (float) (farRight.y + width));
+            LatLng top_right_right = projection.fromScreenLocation(top_right_right_p);
+
+            PointF top_right_left_p = new PointF((float) (farRight.x - width), (float) (farRight.y + width));
+            LatLng top_right_left = projection.fromScreenLocation(top_right_left_p);
+
+            /**
+            PointF bottom_right_right_p = new PointF(nearRight.x, (float) (nearRight.y - width));
+            LatLng bottom_right_right = projection.fromScreenLocation(bottom_right_right_p);*/
+
+            PointF bottom_right_left_p = new PointF((float) (nearRight.x - width), (float) (nearRight.y - width));
+            LatLng bottom_right_left = projection.fromScreenLocation(bottom_right_left_p);
+
+            /**
+            PointF bottom_left_left_p = new PointF(nearLeft.x, (float) (nearLeft.y - width));
+            LatLng bottom_left_left = projection.fromScreenLocation(bottom_left_left_p);*/
+
+            PointF bottom_left_right_p = new PointF((float) (nearLeft.x + width), (float) (nearLeft.y - width));
+            LatLng bottom_left_right = projection.fromScreenLocation(bottom_left_right_p);
+
+
+            List<LatLng> top = new ArrayList<>();
+            top.add(projection.fromScreenLocation(farLeft));
+            top.add(projection.fromScreenLocation(farRight));
+            top.add(top_right_right);
+            top.add(top_left_left);
+
+            List<LatLng> bottom = new ArrayList<>();
+            bottom.add(top_left_left);
+            bottom.add(top_left_right);
+            bottom.add(bottom_left_right);
+            bottom.add(bottom_right_left);
+            bottom.add(top_right_left);
+            bottom.add(top_right_right);
+            bottom.add(top_right_right);
+            bottom.add(projection.fromScreenLocation(nearRight));
+            bottom.add(projection.fromScreenLocation(nearLeft));
+
+            List<PolygonOptions> frameOptions = new ArrayList<>();
+            frameOptions.add(new PolygonOptions().addAll(top).alpha(0.1f));
+            frameOptions.add(new PolygonOptions().addAll(bottom).alpha(0.1f));
+
+            frame = (mMapboxMap.addPolygons(frameOptions));
+            if (previous_frame != null) mMapboxMap.removeAnnotations(previous_frame);
+            frameHandler.postDelayed(this, FRAME_UPDATE_INTERVAL);
         }
-
-        PointF farLeft = projection.toScreenLocation(bbox.farLeft);
-        farLeft.x -= overflow;
-        farLeft.y -= overflow;
-        PointF farRight = projection.toScreenLocation(bbox.farRight);
-        farRight.x += overflow;
-        farRight.y -= overflow;
-        PointF nearRight = projection.toScreenLocation(bbox.nearRight);
-        nearRight.x += overflow;
-        nearRight.y += overflow;
-        PointF nearLeft = projection.toScreenLocation(bbox.nearLeft);
-        nearLeft.x -= overflow;
-        nearLeft.y += overflow;
-
-        PointF top_left_left_p = new PointF(farLeft.x, (float) (farLeft.y + width));
-        LatLng top_left_left = projection.fromScreenLocation(top_left_left_p);
-
-        PointF top_left_right_p = new PointF((float) (farLeft.x + width), (float) (farLeft.y + width));
-        LatLng top_left_right = projection.fromScreenLocation(top_left_right_p);
-
-        PointF top_right_right_p = new PointF(farRight.x, (float) (farRight.y + width));
-        LatLng top_right_right = projection.fromScreenLocation(top_right_right_p);
-
-        PointF top_right_left_p = new PointF((float) (farRight.x - width), (float) (farRight.y + width));
-        LatLng top_right_left = projection.fromScreenLocation(top_right_left_p);
-
-        /**
-        PointF bottom_right_right_p = new PointF(nearRight.x, (float) (nearRight.y - width));
-        LatLng bottom_right_right = projection.fromScreenLocation(bottom_right_right_p);*/
-
-        PointF bottom_right_left_p = new PointF((float) (nearRight.x - width), (float) (nearRight.y - width));
-        LatLng bottom_right_left = projection.fromScreenLocation(bottom_right_left_p);
-
-        /**
-        PointF bottom_left_left_p = new PointF(nearLeft.x, (float) (nearLeft.y - width));
-        LatLng bottom_left_left = projection.fromScreenLocation(bottom_left_left_p);*/
-
-        PointF bottom_left_right_p = new PointF((float) (nearLeft.x + width), (float) (nearLeft.y - width));
-        LatLng bottom_left_right = projection.fromScreenLocation(bottom_left_right_p);
-
-
-        List<LatLng> top = new ArrayList<>();
-        top.add(projection.fromScreenLocation(farLeft));
-        top.add(projection.fromScreenLocation(farRight));
-        top.add(top_right_right);
-        top.add(top_left_left);
-
-        List<LatLng> bottom = new ArrayList<>();
-        bottom.add(top_left_left);
-        bottom.add(top_left_right);
-        bottom.add(bottom_left_right);
-        bottom.add(bottom_right_left);
-        bottom.add(top_right_left);
-        bottom.add(top_right_right);
-        bottom.add(top_right_right);
-        bottom.add(projection.fromScreenLocation(nearRight));
-        bottom.add(projection.fromScreenLocation(nearLeft));
-
-        List<PolygonOptions> frameOptions = new ArrayList<>();
-        frameOptions.add(new PolygonOptions().addAll(top).alpha(0.1f));
-        frameOptions.add(new PolygonOptions().addAll(bottom).alpha(0.1f));
-
-        frame = (mMapboxMap.addPolygons(frameOptions));
-        if (previous_frame != null) mMapboxMap.removeAnnotations(previous_frame);
-    }
+    };
 
     @Override
     protected void onStart() {
@@ -756,7 +755,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         if (frameStatus) {
-            frameHandler.removeCallbacks(frameRunnable);
+            frameHandler.removeCallbacks(visualizeBorderFrame);
             if (mMapboxMap != null) {
                 mMapboxMap.removeAnnotations(frame);
             }
@@ -767,7 +766,7 @@ public class MainActivity extends AppCompatActivity {
     public void onPause() {
         super.onPause();
         if (frameStatus) {
-            frameHandler.removeCallbacks(frameRunnable);
+            frameHandler.removeCallbacks(visualizeBorderFrame);
             if (mMapboxMap != null) {
                 mMapboxMap.removeAnnotations(frame);
             }
@@ -783,7 +782,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (mMapboxMap != null) {
             mMapboxMap.removeAnnotations();
-
+            frameHandler.post(visualizeBorderFrame);
         }
         if (currentRoute != null) {
             drawRoute(currentRoute);
@@ -794,7 +793,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (frameStatus) {
-            frameHandler.removeCallbacks(frameRunnable);
+            frameHandler.removeCallbacks(visualizeBorderFrame);
             if (mMapboxMap != null) {
                 mMapboxMap.removeAnnotations(frame);
             }
