@@ -10,4 +10,6 @@
     <string name="dialog_visualization_type_list_preference">Select Visualization</string>
     <string name="inline_miscellaneous">Miscellaneous</string>
     <string name="simulate_route">Simulate Route</string>
+    <string name="landmark_location_preference">Select Landmark Set</string>
+    <string name="dialog_landmark_location_preference">Landmark Set</string>
 </resources>

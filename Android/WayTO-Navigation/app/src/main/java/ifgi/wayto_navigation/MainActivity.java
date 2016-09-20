@@ -31,8 +31,11 @@ import android.widget.Toast;
 import com.hs.gpxparser.GPXParser;
 import com.hs.gpxparser.modal.GPX;
 import com.mapbox.mapboxsdk.annotations.Icon;
+import com.mapbox.mapboxsdk.annotations.IconFactory;
 import com.mapbox.mapboxsdk.annotations.Marker;
 import com.mapbox.mapboxsdk.annotations.MarkerOptions;
+import com.mapbox.mapboxsdk.annotations.MarkerView;
+import com.mapbox.mapboxsdk.annotations.MarkerViewOptions;
 import com.mapbox.mapboxsdk.annotations.Polygon;
 import com.mapbox.mapboxsdk.annotations.PolygonOptions;
 import com.mapbox.mapboxsdk.annotations.Polyline;
@@ -155,7 +158,12 @@ public class MainActivity extends AppCompatActivity {
     private Handler frameHandler;
     private Runnable frameRunnable;
     private boolean frameStatus;
-    private static final int FRAME_UPDATE_INTERVAL = 220; //ms
+    private static final int FRAME_UPDATE_INTERVAL = 220;//ms
+    private static boolean toDrawFrame = false;
+
+    protected String gps_track = "ms"; //default
+
+    private Icon anchorIcon;
 
 
     @Override
@@ -163,11 +171,14 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        anchorIcon = IconFactory.getInstance(this).fromDrawable(getDrawable(R.drawable.dot));
+        landmarkSetup();
         globals = Globals.getInstance();
         mCurrentPositionIcon = ImageUtils.getIcon(R.drawable.position, this);
         MAPBOX_ACCESS_TOKEN = getResources().getString(R.string.accessToken);
-        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
-        prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
         simulate = prefs.getBoolean("checkbox_simulation", true);
         final Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
         myToolbar.setLogo(R.drawable.logo_wayto);
@@ -183,22 +194,6 @@ public class MainActivity extends AppCompatActivity {
         getBaseContext().getResources().updateConfiguration(config,
                 getBaseContext().getResources().getDisplayMetrics());
 
-        /**
-         * Münster Landmarks
-         */
-        Landmark dome = new Landmark("dome", 7.625776, 51.962999, false, 0, this);
-        Landmark train_station = new Landmark("station", 7.634615, 51.956593, false, 0, this);
-        Landmark buddenturm = new Landmark("buddenturm", 7.623099, 51.966311, false, 750, this);
-        Landmark kapuzinerkloster = new Landmark("kapuzinerkloster", 7.606970, 51.970665, true, 0, this);
-        Landmark castle = new Landmark("castle", 7.613166, 51.963613, false, 0, this);
-        Landmark zoo = new Landmark("zoo", 7.586884, 51.948622, false, 1800, this);
-
-        landmarks.add(dome);
-        landmarks.add(buddenturm);
-        landmarks.add(kapuzinerkloster);
-        landmarks.add(castle);
-        landmarks.add(train_station);
-        landmarks.add(zoo);
 
         final ArrayList<Waypoint> positions = new ArrayList<>();
         positions.add(origin);
@@ -230,6 +225,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mMapboxMap = mapboxMap;
+                CameraPosition cameraPosition = new CameraPosition.Builder()
+                        .target(new LatLng(51.953780194, 7.619926209))
+                        .zoom(16)
+                        .build();
+
+                mMapboxMap.setCameraPosition(cameraPosition);
 
                 mMapboxMap.setOnMyLocationChangeListener(new MapboxMap.OnMyLocationChangeListener() {
                     @Override
@@ -244,7 +245,9 @@ public class MainActivity extends AppCompatActivity {
                 mMapboxMap.getTrackingSettings().setMyLocationTrackingMode(MyLocationTracking.TRACKING_FOLLOW);
                 mMapboxMap.getTrackingSettings().setMyBearingTrackingMode(MyBearingTracking.GPS);
 
-                frameHandler.post(visualizeBorderFrame);
+                if (toDrawFrame) {
+                    frameHandler.post(visualizeBorderFrame);
+                }
 
                 mMapboxMap.setOnCameraChangeListener(new MapboxMap.OnCameraChangeListener() {
                     @Override
@@ -259,6 +262,8 @@ public class MainActivity extends AppCompatActivity {
                 mMapboxMap.getUiSettings().setAttributionEnabled(false); //needs to be enabled in production
                 mMapboxMap.getUiSettings().setZoomGesturesEnabled(false);
 
+
+
                 try {
                     if(simulate) {
                         simulate_route();
@@ -270,12 +275,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
-                CameraPosition cameraPosition = new CameraPosition.Builder()
-                        .target(new LatLng(51.953780194, 7.619926209))
-                        .zoom(15)
-                        .build();
 
-                mMapboxMap.setCameraPosition(cameraPosition);
 
                 mMapboxMap.setOnMapLongClickListener(new MapboxMap.OnMapLongClickListener() {
                     @Override
@@ -360,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
         }*/
         //landmarkVisualization();
     }
-
+    List<MarkerView> onscreen = new ArrayList<>();
     private void landmarkVisualization() {
         if (mMapboxMap != null) {
             globals.setOnScreenAnchorsTodo(true);
@@ -392,8 +392,18 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 } else {
 
-                    // Print some info about the route
                     currentRoute = response.body().getRoutes().get(0);
+
+                    LatLng start = new LatLng(
+                            simulation_locations.get(0).getLatitude(),
+                            simulation_locations.get(0).getLongitude());
+                    LatLng bearingTo = new LatLng(
+                            simulation_locations.get(1).getLatitude(),
+                            simulation_locations.get(1).getLongitude());
+
+                    double bearing = SpatialUtils.bearing(start, bearingTo);
+                    mMapboxMap.setCameraPosition(new CameraPosition.Builder()
+                            .target(start).bearing(bearing).build());
                     drawRoute(currentRoute);
                     if(simulate && !isSimulationRunning) {
                         Handler handler = new Handler();
@@ -435,7 +445,7 @@ public class MainActivity extends AppCompatActivity {
         currentJtsRouteLs = new GeometryFactory().createLineString(coords);
         PolylineOptions routeOptions = new PolylineOptions()
                 .add(points)
-                .color(Color.parseColor("#3887be"));
+                .color(Color.parseColor("#396F62"));
         currentRoutePolyline = mMapboxMap.addPolyline(routeOptions);
     }
 
@@ -458,36 +468,12 @@ public class MainActivity extends AppCompatActivity {
         return location;
     }
 
-
     /**
-     * shows current user position
-     * @param location
-     */
-    private void moveCurrentPositionMarker(Location location) {
-
-        if (mMapboxMap == null) {return;}
-
-        if (currentPositionMarker != null) {
-            currentPositionMarker.setPosition(
-                    new LatLng(location.getLatitude(), location.getLongitude()));
-        } else {
-            MarkerOptions options = new MarkerOptions()
-                    .position(new LatLng(location.getLatitude(), location.getLongitude()))
-                    .icon(mCurrentPositionIcon);
-            currentPositionMarker = mMapboxMap.addMarker(options);
-        }
-        if (mMapboxMap.getMyLocation() != null) {
-            //mMapboxMap.getMyLocation().set(location);
-        }
-    }
-
-
-    /**
-     * Mock gps positions from gpx file called "test.gpx"
+     * Mock gps positions from gpx file
      */
     private void simulate_route() {
         toggleActionBar(actionBar);
-        List<com.hs.gpxparser.modal.Waypoint> waypoints = loadGPX("test");
+        List<com.hs.gpxparser.modal.Waypoint> waypoints = loadGPX(gps_track);
         List<Location> locations = new ArrayList<>();
         for (int i = 0; i < waypoints.size(); i++) {
             Location mockLocation = new Location("mock");
@@ -505,7 +491,10 @@ public class MainActivity extends AppCompatActivity {
                 float speed = (float) ((distance / elapsed_time));
                 mockLocation.setSpeed(speed);
             } else {
-                bearing = 0;
+                Location second = new Location("mock");
+                second.setLatitude(wp.getLatitude());
+                second.setLongitude(wp.getLongitude());
+                bearing = mockLocation.bearingTo(second);;
             }
             mockLocation.setBearing(bearing);
             mockLocation.setAccuracy(1.0f);
@@ -521,11 +510,13 @@ public class MainActivity extends AppCompatActivity {
         simulation_locations = locations;
     }
 
+
     /**
      * Reading waypoints from a gpx file (ExternalStorageDirectory/waypoints.gpx) that are used
      * to request a route from the mapbox API
      * @return List of Waypoints
      */
+    /**
     private List<Waypoint> getSimulationRouteWaypoints() {
         List<com.hs.gpxparser.modal.Waypoint> waypoints = loadGPX("waypoints");
         List<Waypoint> mapbox_wp = new ArrayList<>();
@@ -534,7 +525,7 @@ public class MainActivity extends AppCompatActivity {
             mapbox_wp.add(new Waypoint(current_wp.getLongitude(), current_wp.getLatitude()));
         }
         return mapbox_wp;
-    }
+    }*/
 
     private List<com.hs.gpxparser.modal.Waypoint> loadGPX(String filename) {
         List<com.hs.gpxparser.modal.Waypoint> waypoints = new ArrayList<>();
@@ -570,7 +561,7 @@ public class MainActivity extends AppCompatActivity {
     @Deprecated //use getSimulationRouteWaypoints instead
     private List<Waypoint> locationsToWaypoints(List<Location> locations) {
         List<com.mapbox.services.directions.v4.models.Waypoint> waypoints = new ArrayList<>();
-        int max_waypoints = 5;
+        int max_waypoints = 7;
         int steps = (int) Math.ceil(locations.size() / max_waypoints);
         Location l;
         for (int i = 0; waypoints.size() < max_waypoints - 1; i += steps) {
@@ -593,11 +584,8 @@ public class MainActivity extends AppCompatActivity {
                 final Location previous;
                 mock(first);
                 previous = first;
-                for (int i = 1; i < locations.size(); i++) {
+                for (int i = 1; i < locations.size(); i+=2) {
                     final Location current = locations.get(i);
-                    if (current.getSpeed() < 2 && previous.getSpeed() < 2) {
-                        continue;
-                    }
                     Runnable runnable = new Runnable() {
                         @Override
                         public void run() {
@@ -605,9 +593,21 @@ public class MainActivity extends AppCompatActivity {
                             mock(current);
                         }
                     };
+
                     long diff = current.getTime() - first.getTime();
                     simulationHandler.postDelayed(runnable, diff);
                 }
+
+                final Location last = locations.get(locations.size()-1);
+                Runnable runnable2 = new Runnable() {
+                    @Override
+                    public void run() {
+                        isSimulationRunning = true;
+                        mock(last);
+                    }
+                };
+                long diff = last.getTime() - first.getTime();
+                simulationHandler.postDelayed(runnable2, diff);
             }
         });
     }
@@ -782,7 +782,9 @@ public class MainActivity extends AppCompatActivity {
 
         if (mMapboxMap != null) {
             mMapboxMap.removeAnnotations();
-            frameHandler.post(visualizeBorderFrame);
+            if (toDrawFrame) {
+                frameHandler.post(visualizeBorderFrame);
+            }
         }
         if (currentRoute != null) {
             drawRoute(currentRoute);
@@ -840,6 +842,76 @@ public class MainActivity extends AppCompatActivity {
                 // Invoke the superclass to handle it.
                 return super.onOptionsItemSelected(item);
 
+        }
+    }
+
+    private void landmarkSetup() {
+        String landmark_set = prefs.getString("landmark_location_preference", "");
+        switch (landmark_set) {
+            case "0": //Münster
+                Landmark dome = new Landmark("dome", 7.625776, 51.962999, false, 0, this);
+                Landmark train_station = new Landmark("station", 7.634615, 51.956593, false, 0, this);
+                Landmark buddenturm = new Landmark("tower", 7.623099, 51.966311, false, 0, this);
+                Landmark kapuzinerkloster = new Landmark("church", 7.606970, 51.970665, true, 0, this);
+                Landmark castle = new Landmark("castle", 7.613166, 51.963613, false, 0, this);
+                Landmark zoo = new Landmark("zoo", 7.586884, 51.948622, false, 0, this);
+
+                landmarks.add(dome);
+                landmarks.add(buddenturm);
+                landmarks.add(kapuzinerkloster);
+                landmarks.add(castle);
+                landmarks.add(train_station);
+                landmarks.add(zoo);
+                gps_track = "ms";
+
+                break;
+
+            case "1": //Meckenheim
+                Landmark fire_station = new Landmark("fire_station", 7.041904, 50.621435, false, 0, this);
+                Landmark church = new Landmark("church", 7.055108, 50.630385, false, 0, this);
+                Landmark supermarket = new Landmark("supermarket", 7.019256, 50.627224, false, 0, this);
+                Landmark hospital = new Landmark("hospital", 7.023028, 50.619465, false, 0, this);
+                Landmark factory = new Landmark("factory", 7.036848, 50.633346, false, 0, this);
+
+                //on screen only:
+                Landmark gym = new Landmark("gym", 7.038259, 50.625125, true, 0, this);
+                Landmark parking = new Landmark("parking", 7.052686, 50.629195, true, 0, this);
+
+                landmarks.add(gym);
+                landmarks.add(parking);
+
+                landmarks.add(supermarket);
+                landmarks.add(church);
+                landmarks.add(fire_station);
+                landmarks.add(hospital);
+                landmarks.add(factory);
+
+                gps_track = "meckenheim";
+                break;
+
+
+            case "2": //Rheinbach
+                //on screen only
+                Landmark tower = new Landmark("tower", 6.946510, 50.624829, true, 0, this);
+                Landmark gas_station = new Landmark("gas_station", 6.959922, 50.625273, true, 0, this);
+                // off screen
+                //Landmark car_dealership = new Landmark("workshop", 6.963145, 50.626406, false, 0, this);
+                Landmark car_dealership = new Landmark("workshop", 6.963635,50.625962, false, 0, this);
+                Landmark swimming = new Landmark("swimming", 6.933592,50.619270, false, 0, this);
+                Landmark university = new Landmark("university", 6.947847, 50.632435, false, 0, this);
+                Landmark zoo_rhb = new Landmark("zoo", 6.931504, 50.627639, false, 0, this);
+                Landmark museum = new Landmark("museum", 6.951842, 50.620205, false, 0, this);
+
+
+                landmarks.add(gas_station);
+                landmarks.add(tower);
+                landmarks.add(car_dealership);
+                landmarks.add(swimming);
+                landmarks.add(museum);
+                landmarks.add(university);
+                landmarks.add(zoo_rhb);
+                gps_track = "rheinbach";
+                break;
         }
     }
 

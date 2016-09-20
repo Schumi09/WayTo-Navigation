@@ -57,10 +57,10 @@ public class WiFiPointer extends Visualization{
                 this.onScreenAnchor, this.landmark.getLocationLatLng());
         angle = (float) (angle - map.getCameraPosition().bearing);
         double distance = this.landmark.getLocationLatLng().distanceTo(this.onScreenAnchor);
+        double radius = map.getCameraPosition().target
+                .distanceTo(map.getProjection().getVisibleRegion().farLeft) * 2;
         int arrow_number = 1;
-        if (distance >
-                map.getCameraPosition().target
-                        .distanceTo(map.getProjection().getVisibleRegion().farLeft) * 2) {
+        if (distance > radius) {
             arrow_number = 2;
         }
         String drawable_name = "landmark_wifi_" + arrow_number;

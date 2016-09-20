@@ -353,6 +353,10 @@ public class Landmark {
             return coordinate;
         }
 
+        public LatLng getLatLng(Projection projection) {
+            return new LatLng(projection.fromScreenLocation(coordinateToPointF(this.coordinate)));
+        }
+
         public boolean isFree() {
             return isFree;
         }
@@ -397,6 +401,7 @@ public class Landmark {
             long_x += space + long_space_increase;
             anchors.add(new OnScreenAnchor(new Coordinate(long_x, coordinates[1].y)));
         }
+
         //short right:
         double short_y = coordinates[1].y;
         for (int i=1; i<=short_number; i++) {
@@ -411,11 +416,14 @@ public class Landmark {
         }
 
         //short left:
-        for (int i=1; i<short_number-1; i++) {
+        for (int i=1; i<=short_number; i++) {
             short_y -= space + short_space_increase;
             anchors.add(new OnScreenAnchor(new Coordinate(long_x, short_y)));
         }
+
         anchors.add(anchors.get(0)); //take first anchor point to form a closed linestring
+        //temporary blocking edge:
+
 
         return anchors;
     }

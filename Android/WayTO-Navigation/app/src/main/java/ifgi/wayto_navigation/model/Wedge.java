@@ -51,11 +51,11 @@ public class Wedge extends Visualization{
     private final LatLng onScreenAnchor;
 
     private static int INTRUSION_CONSTANT = 20;
-    private static double APERTURE_CONSTANT = 0.15;
-    private static int LEG_INCREASE = 70; //px
+    private static double APERTURE_CONSTANT = 0.04;
+    private static int LEG_INCREASE = 90; //px
 
     private static double OFFSET_RATIO = 0.0;
-    private static int STEP = 90;
+    private static int STEP = 56;
 
     @Override
     public List<Annotation> getVisualization() {
@@ -75,7 +75,6 @@ public class Wedge extends Visualization{
      * ACM, New York, NY, USA, 787-796. DOI=http://dx.doi.org/10.1145/1357054.1357179
      * todo: Calculate intersection point via bbox-polygon/landmark position
      * @param map Current MapboxMap object
-     * @return MapBox Polygon Object
      */
     private void draw(MapboxMap map) {
         PointF locationScreen = map.getProjection().toScreenLocation(landmark.getLocationLatLng());
@@ -93,6 +92,7 @@ public class Wedge extends Visualization{
         double distance = (ratio * true_distance);
         //double map_orientation = map.getCameraPosition().bearing;
         double heading = SpatialUtils.bearing(landmark.getLocationLatLng(), heading_coord);
+        heading = Math.round(heading);
                 //- map.getCameraPosition().bearing;
         double aperture = calculateAperture(distanceToScreen, leg);
 
@@ -114,7 +114,6 @@ public class Wedge extends Visualization{
         this.visualization.add(map.addPolyline(polygonOption));
         //com.mapbox.mapboxsdk.annotations.Polygon Polyline = (com.mapbox.mapboxsdk.annotations.Polyline) this.visualization.get(0);
         drawWedgeMarker(map, mid_point);
-
     }
 
     private void drawWedgeMarker(MapboxMap map, LatLng mid_point) {
