@@ -1,0 +1,538 @@
+<?xml version="1.0"?>
+<gpx creator="GPS Visualizer http://www.gpsvisualizer.com/" version="1.0" xmlns="http://www.topografix.com/GPX/1/0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd">
+<wpt lat="51.953780194" lon="7.619926209">
+  <time>2016-02-23T11:55:50Z</time>
+  <speed>11.50</speed>
+  <name>2016-02-23 11:55:50</name>
+</wpt>
+<wpt lat="51.954339392" lon="7.619953093">
+  <time>2016-02-23T11:55:55Z</time>
+  <speed>10.65</speed>
+  <name>2016-02-23 11:55:55</name>
+</wpt>
+<wpt lat="51.954642986" lon="7.619962591">
+  <time>2016-02-23T11:56:00Z</time>
+  <speed>2.95</speed>
+  <name>2016-02-23 11:56:00</name>
+</wpt>
+<wpt lat="51.95467052" lon="7.619954874">
+  <time>2016-02-23T11:56:05Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:56:05</name>
+</wpt>
+<wpt lat="51.95467052" lon="7.619954874">
+  <time>2016-02-23T11:56:10Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:56:10</name>
+</wpt>
+<wpt lat="51.95467052" lon="7.619954874">
+  <time>2016-02-23T11:56:15Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:56:15</name>
+</wpt>
+<wpt lat="51.954667423" lon="7.61995442">
+  <time>2016-02-23T11:56:20Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:56:20</name>
+</wpt>
+<wpt lat="51.954672102" lon="7.619954205">
+  <time>2016-02-23T11:56:25Z</time>
+  <speed>1.00</speed>
+  <name>2016-02-23 11:56:25</name>
+</wpt>
+<wpt lat="51.955020233" lon="7.619936141">
+  <time>2016-02-23T11:56:30Z</time>
+  <speed>8.95</speed>
+  <name>2016-02-23 11:56:30</name>
+</wpt>
+<wpt lat="51.955503745" lon="7.61978072">
+  <time>2016-02-23T11:56:35Z</time>
+  <speed>12.38</speed>
+  <name>2016-02-23 11:56:35</name>
+</wpt>
+<wpt lat="51.956077718" lon="7.619521656">
+  <time>2016-02-23T11:56:40Z</time>
+  <speed>13.65</speed>
+  <name>2016-02-23 11:56:40</name>
+</wpt>
+<wpt lat="51.956699798" lon="7.619514095">
+  <time>2016-02-23T11:56:45Z</time>
+  <speed>15.56</speed>
+  <name>2016-02-23 11:56:45</name>
+</wpt>
+<wpt lat="51.957354224" lon="7.619751602">
+  <time>2016-02-23T11:56:50Z</time>
+  <speed>14.72</speed>
+  <name>2016-02-23 11:56:50</name>
+</wpt>
+<wpt lat="51.958006831" lon="7.619879768">
+  <time>2016-02-23T11:56:55Z</time>
+  <speed>15.35</speed>
+  <name>2016-02-23 11:56:55</name>
+</wpt>
+<wpt lat="51.958692245" lon="7.619670868">
+  <time>2016-02-23T11:57:00Z</time>
+  <speed>15.84</speed>
+  <name>2016-02-23 11:57:00</name>
+</wpt>
+<wpt lat="51.95928966" lon="7.619098501">
+  <time>2016-02-23T11:57:05Z</time>
+  <speed>16.32</speed>
+  <name>2016-02-23 11:57:05</name>
+</wpt>
+<wpt lat="51.959838268" lon="7.618404994">
+  <time>2016-02-23T11:57:10Z</time>
+  <speed>14.85</speed>
+  <name>2016-02-23 11:57:10</name>
+</wpt>
+<wpt lat="51.960410138" lon="7.617942176">
+  <time>2016-02-23T11:57:15Z</time>
+  <speed>13.89</speed>
+  <name>2016-02-23 11:57:15</name>
+</wpt>
+<wpt lat="51.960981128" lon="7.617787928">
+  <time>2016-02-23T11:57:20Z</time>
+  <speed>12.24</speed>
+  <name>2016-02-23 11:57:20</name>
+</wpt>
+<wpt lat="51.961285858" lon="7.617743818">
+  <time>2016-02-23T11:57:25Z</time>
+  <speed>6.15</speed>
+  <name>2016-02-23 11:57:25</name>
+</wpt>
+<wpt lat="51.961647583" lon="7.617713007">
+  <time>2016-02-23T11:57:30Z</time>
+  <speed>8.42</speed>
+  <name>2016-02-23 11:57:30</name>
+</wpt>
+<wpt lat="51.962107303" lon="7.617635083">
+  <time>2016-02-23T11:57:35Z</time>
+  <speed>10.00</speed>
+  <name>2016-02-23 11:57:35</name>
+</wpt>
+<wpt lat="51.962521728" lon="7.617684936">
+  <time>2016-02-23T11:57:40Z</time>
+  <speed>10.31</speed>
+  <name>2016-02-23 11:57:40</name>
+</wpt>
+<wpt lat="51.963090787" lon="7.617836894">
+  <time>2016-02-23T11:57:45Z</time>
+  <speed>12.99</speed>
+  <name>2016-02-23 11:57:45</name>
+</wpt>
+<wpt lat="51.963634771" lon="7.617934582">
+  <time>2016-02-23T11:57:50Z</time>
+  <speed>13.13</speed>
+  <name>2016-02-23 11:57:50</name>
+</wpt>
+<wpt lat="51.9642317" lon="7.617944793">
+  <time>2016-02-23T11:57:55Z</time>
+  <speed>13.33</speed>
+  <name>2016-02-23 11:57:55</name>
+</wpt>
+<wpt lat="51.964820867" lon="7.617852145">
+  <time>2016-02-23T11:58:00Z</time>
+  <speed>13.06</speed>
+  <name>2016-02-23 11:58:00</name>
+</wpt>
+<wpt lat="51.965369501" lon="7.617675911">
+  <time>2016-02-23T11:58:05Z</time>
+  <speed>12.50</speed>
+  <name>2016-02-23 11:58:05</name>
+</wpt>
+<wpt lat="51.965865868" lon="7.617457467">
+  <time>2016-02-23T11:58:10Z</time>
+  <speed>11.42</speed>
+  <name>2016-02-23 11:58:10</name>
+</wpt>
+<wpt lat="51.966199999" lon="7.617278796">
+  <time>2016-02-23T11:58:15Z</time>
+  <speed>3.01</speed>
+  <name>2016-02-23 11:58:15</name>
+</wpt>
+<wpt lat="51.966208912" lon="7.617270995">
+  <time>2016-02-23T11:58:20Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:20</name>
+</wpt>
+<wpt lat="51.966207364" lon="7.617270768">
+  <time>2016-02-23T11:58:25Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:25</name>
+</wpt>
+<wpt lat="51.966207364" lon="7.617270768">
+  <time>2016-02-23T11:58:30Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:30</name>
+</wpt>
+<wpt lat="51.966208912" lon="7.617270995">
+  <time>2016-02-23T11:58:35Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:35</name>
+</wpt>
+<wpt lat="51.966207364" lon="7.617270768">
+  <time>2016-02-23T11:58:40Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:40</name>
+</wpt>
+<wpt lat="51.966208912" lon="7.617270995">
+  <time>2016-02-23T11:58:45Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:45</name>
+</wpt>
+<wpt lat="51.966207364" lon="7.617270768">
+  <time>2016-02-23T11:58:50Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:50</name>
+</wpt>
+<wpt lat="51.966210461" lon="7.617271222">
+  <time>2016-02-23T11:58:55Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:58:55</name>
+</wpt>
+<wpt lat="51.966208912" lon="7.617270995">
+  <time>2016-02-23T11:59:00Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:59:00</name>
+</wpt>
+<wpt lat="51.966208912" lon="7.617270995">
+  <time>2016-02-23T11:59:05Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 11:59:05</name>
+</wpt>
+<wpt lat="51.966254769" lon="7.61721218">
+  <time>2016-02-23T11:59:10Z</time>
+  <speed>3.15</speed>
+  <name>2016-02-23 11:59:10</name>
+</wpt>
+<wpt lat="51.96653979" lon="7.616912118">
+  <time>2016-02-23T11:59:15Z</time>
+  <speed>8.63</speed>
+  <name>2016-02-23 11:59:15</name>
+</wpt>
+<wpt lat="51.966779186" lon="7.616400654">
+  <time>2016-02-23T11:59:20Z</time>
+  <speed>8.83</speed>
+  <name>2016-02-23 11:59:20</name>
+</wpt>
+<wpt lat="51.966904386" lon="7.615947782">
+  <time>2016-02-23T11:59:25Z</time>
+  <speed>4.65</speed>
+  <name>2016-02-23 11:59:25</name>
+</wpt>
+<wpt lat="51.966929169" lon="7.615852129">
+  <time>2016-02-23T11:59:30Z</time>
+  <speed>0.17</speed>
+  <name>2016-02-23 11:59:30</name>
+</wpt>
+<wpt lat="51.966929169" lon="7.615852129">
+  <time>2016-02-23T11:59:35Z</time>
+  <speed>0.33</speed>
+  <name>2016-02-23 11:59:35</name>
+</wpt>
+<wpt lat="51.967025735" lon="7.615666884">
+  <time>2016-02-23T11:59:40Z</time>
+  <speed>4.85</speed>
+  <name>2016-02-23 11:59:40</name>
+</wpt>
+<wpt lat="51.967224407" lon="7.615296911">
+  <time>2016-02-23T11:59:45Z</time>
+  <speed>7.22</speed>
+  <name>2016-02-23 11:59:45</name>
+</wpt>
+<wpt lat="51.967326819" lon="7.614809308">
+  <time>2016-02-23T11:59:50Z</time>
+  <speed>8.91</speed>
+  <name>2016-02-23 11:59:50</name>
+</wpt>
+<wpt lat="51.967288811" lon="7.614175423">
+  <time>2016-02-23T11:59:55Z</time>
+  <speed>9.01</speed>
+  <name>2016-02-23 11:59:55</name>
+</wpt>
+<wpt lat="51.967248579" lon="7.613452261">
+  <time>2016-02-23T12:00:00Z</time>
+  <speed>10.40</speed>
+  <name>2016-02-23 12:00:00</name>
+</wpt>
+<wpt lat="51.967248922" lon="7.612707381">
+  <time>2016-02-23T12:00:05Z</time>
+  <speed>10.37</speed>
+  <name>2016-02-23 12:00:05</name>
+</wpt>
+<wpt lat="51.967360772" lon="7.611945441">
+  <time>2016-02-23T12:00:10Z</time>
+  <speed>11.65</speed>
+  <name>2016-02-23 12:00:10</name>
+</wpt>
+<wpt lat="51.96752354" lon="7.611158351">
+  <time>2016-02-23T12:00:15Z</time>
+  <speed>10.38</speed>
+  <name>2016-02-23 12:00:15</name>
+</wpt>
+<wpt lat="51.967612794" lon="7.610582642">
+  <time>2016-02-23T12:00:20Z</time>
+  <speed>5.57</speed>
+  <name>2016-02-23 12:00:20</name>
+</wpt>
+<wpt lat="51.967627611" lon="7.610373095">
+  <time>2016-02-23T12:00:25Z</time>
+  <speed>1.79</speed>
+  <name>2016-02-23 12:00:25</name>
+</wpt>
+<wpt lat="51.967785046" lon="7.610173571">
+  <time>2016-02-23T12:00:30Z</time>
+  <speed>6.16</speed>
+  <name>2016-02-23 12:00:30</name>
+</wpt>
+<wpt lat="51.967957761" lon="7.609622988">
+  <time>2016-02-23T12:00:35Z</time>
+  <speed>10.91</speed>
+  <name>2016-02-23 12:00:35</name>
+</wpt>
+<wpt lat="51.968123227" lon="7.608877933">
+  <time>2016-02-23T12:00:40Z</time>
+  <speed>10.36</speed>
+  <name>2016-02-23 12:00:40</name>
+</wpt>
+<wpt lat="51.968242806" lon="7.608159481">
+  <time>2016-02-23T12:00:45Z</time>
+  <speed>10.50</speed>
+  <name>2016-02-23 12:00:45</name>
+</wpt>
+<wpt lat="51.968329911" lon="7.607440497">
+  <time>2016-02-23T12:00:50Z</time>
+  <speed>10.28</speed>
+  <name>2016-02-23 12:00:50</name>
+</wpt>
+<wpt lat="51.968366592" lon="7.60665673">
+  <time>2016-02-23T12:00:55Z</time>
+  <speed>11.11</speed>
+  <name>2016-02-23 12:00:55</name>
+</wpt>
+<wpt lat="51.968420884" lon="7.605856766">
+  <time>2016-02-23T12:01:00Z</time>
+  <speed>10.92</speed>
+  <name>2016-02-23 12:01:00</name>
+</wpt>
+<wpt lat="51.968502499" lon="7.605096307">
+  <time>2016-02-23T12:01:05Z</time>
+  <speed>10.56</speed>
+  <name>2016-02-23 12:01:05</name>
+</wpt>
+<wpt lat="51.968625926" lon="7.604393464">
+  <time>2016-02-23T12:01:10Z</time>
+  <speed>9.97</speed>
+  <name>2016-02-23 12:01:10</name>
+</wpt>
+<wpt lat="51.968763683" lon="7.603805579">
+  <time>2016-02-23T12:01:15Z</time>
+  <speed>7.30</speed>
+  <name>2016-02-23 12:01:15</name>
+</wpt>
+<wpt lat="51.968833345" lon="7.603511123">
+  <time>2016-02-23T12:01:20Z</time>
+  <speed>1.65</speed>
+  <name>2016-02-23 12:01:20</name>
+</wpt>
+<wpt lat="51.968841184" lon="7.603447753">
+  <time>2016-02-23T12:01:25Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:01:25</name>
+</wpt>
+<wpt lat="51.96883964" lon="7.60344747">
+  <time>2016-02-23T12:01:30Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:01:30</name>
+</wpt>
+<wpt lat="51.968841188" lon="7.603447696">
+  <time>2016-02-23T12:01:35Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:01:35</name>
+</wpt>
+<wpt lat="51.968879352" lon="7.603296315">
+  <time>2016-02-23T12:01:40Z</time>
+  <speed>4.72</speed>
+  <name>2016-02-23 12:01:40</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127257">
+  <time>2016-02-23T12:01:45Z</time>
+  <speed>0.47</speed>
+  <name>2016-02-23 12:01:45</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:01:50Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:01:50</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:01:55Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:01:55</name>
+</wpt>
+<wpt lat="51.968917848" lon="7.603127041">
+  <time>2016-02-23T12:02:00Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:00</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:02:05Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:05</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:02:10Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:10</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:02:15Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:15</name>
+</wpt>
+<wpt lat="51.968917848" lon="7.603127041">
+  <time>2016-02-23T12:02:20Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:20</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:02:25Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:25</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:02:30Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:30</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:02:35Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:35</name>
+</wpt>
+<wpt lat="51.968919179" lon="7.603127235">
+  <time>2016-02-23T12:02:40Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:40</name>
+</wpt>
+<wpt lat="51.968920946" lon="7.603127494">
+  <time>2016-02-23T12:02:45Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:45</name>
+</wpt>
+<wpt lat="51.968919397" lon="7.603127267">
+  <time>2016-02-23T12:02:50Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:50</name>
+</wpt>
+<wpt lat="51.968918622" lon="7.603127154">
+  <time>2016-02-23T12:02:55Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:02:55</name>
+</wpt>
+<wpt lat="51.968918622" lon="7.603127154">
+  <time>2016-02-23T12:03:00Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:03:00</name>
+</wpt>
+<wpt lat="51.968920171" lon="7.60312738">
+  <time>2016-02-23T12:03:05Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:03:05</name>
+</wpt>
+<wpt lat="51.968940132" lon="7.603021831">
+  <time>2016-02-23T12:03:10Z</time>
+  <speed>5.33</speed>
+  <name>2016-02-23 12:03:10</name>
+</wpt>
+<wpt lat="51.969032692" lon="7.602405955">
+  <time>2016-02-23T12:03:15Z</time>
+  <speed>11.12</speed>
+  <name>2016-02-23 12:03:15</name>
+</wpt>
+<wpt lat="51.969200986" lon="7.601515629">
+  <time>2016-02-23T12:03:20Z</time>
+  <speed>13.90</speed>
+  <name>2016-02-23 12:03:20</name>
+</wpt>
+<wpt lat="51.969385802" lon="7.600539566">
+  <time>2016-02-23T12:03:25Z</time>
+  <speed>14.17</speed>
+  <name>2016-02-23 12:03:25</name>
+</wpt>
+<wpt lat="51.969554883" lon="7.599598091">
+  <time>2016-02-23T12:03:30Z</time>
+  <speed>13.39</speed>
+  <name>2016-02-23 12:03:30</name>
+</wpt>
+<wpt lat="51.96967132" lon="7.598678623">
+  <time>2016-02-23T12:03:35Z</time>
+  <speed>12.47</speed>
+  <name>2016-02-23 12:03:35</name>
+</wpt>
+<wpt lat="51.969775486" lon="7.597837235">
+  <time>2016-02-23T12:03:40Z</time>
+  <speed>11.13</speed>
+  <name>2016-02-23 12:03:40</name>
+</wpt>
+<wpt lat="51.969837186" lon="7.597218428">
+  <time>2016-02-23T12:03:45Z</time>
+  <speed>5.80</speed>
+  <name>2016-02-23 12:03:45</name>
+</wpt>
+<wpt lat="51.969861878" lon="7.597067572">
+  <time>2016-02-23T12:03:50Z</time>
+  <speed>0.56</speed>
+  <name>2016-02-23 12:03:50</name>
+</wpt>
+<wpt lat="51.969864685" lon="7.597060502">
+  <time>2016-02-23T12:03:55Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:03:55</name>
+</wpt>
+<wpt lat="51.969865828" lon="7.597054888">
+  <time>2016-02-23T12:04:00Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:04:00</name>
+</wpt>
+<wpt lat="51.969862417" lon="7.59669146">
+  <time>2016-02-23T12:04:06Z</time>
+  <speed>6.38</speed>
+  <name>2016-02-23 12:04:06</name>
+</wpt>
+<wpt lat="51.969532405" lon="7.596530793">
+  <time>2016-02-23T12:04:10Z</time>
+  <speed>9.88</speed>
+  <name>2016-02-23 12:04:10</name>
+</wpt>
+<wpt lat="51.969110243" lon="7.596420909">
+  <time>2016-02-23T12:04:15Z</time>
+  <speed>9.07</speed>
+  <name>2016-02-23 12:04:15</name>
+</wpt>
+<wpt lat="51.968864309" lon="7.596316317">
+  <time>2016-02-23T12:04:20Z</time>
+  <speed>4.08</speed>
+  <name>2016-02-23 12:04:20</name>
+</wpt>
+<wpt lat="51.968841552" lon="7.59603889">
+  <time>2016-02-23T12:04:25Z</time>
+  <speed>5.17</speed>
+  <name>2016-02-23 12:04:25</name>
+</wpt>
+<wpt lat="51.968865239" lon="7.595730488">
+  <time>2016-02-23T12:04:30Z</time>
+  <speed>3.71</speed>
+  <name>2016-02-23 12:04:30</name>
+</wpt>
+<wpt lat="51.968877347" lon="7.595584555">
+  <time>2016-02-23T12:04:35Z</time>
+  <speed>0.00</speed>
+  <name>2016-02-23 12:04:35</name>
+</wpt>
+<wpt lat="51.968881582" lon="7.595583714">
+  <time>2016-02-23T12:04:40Z</time>
+  <speed>0.64</speed>
+  <name>2016-02-23 12:04:40</name>
+</wpt>
+</gpx>
