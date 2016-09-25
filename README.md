@@ -1,10 +1,50 @@
 # WayTO-Navigation
 ## Developing and Testing diﬀerent Visualizations of Oﬀ-Screen Landmarks for Car Navigation Systems
-### Project for Master's Thesis
-Along with the increasing proliferation and power of mobile devices, mobile maps (e.g. in pedestrian navigation systems) become both feasible and popular [Allen, 2000]. In contrast to the navigation mode in car navigation systems, pedestrians prefer route instructions based on salient objects [Kluge and Asche, 2012]. Although it is easy for users to get guided to a location, research suggests that the effects are negative. Moreover, users become device-focused and develop a reduced understanding of the environment [Munzer et al., 2006]. Accordingly, users might get lost in cases of inaccurate instructions or failures of the system as they only focus on the given route and turning-point instructions. Consequently, studies suggest that wayfinding and learning of the environment can be influenced through visual presentation modes with mobile applications [Munzer et al., 2012]. One type of information that are mostly not considered in mobile navigation solutions are landmarks. However, it has shown that landmarks are an important supportive element in wayfinding tasks [Golledge, 1999]. One of the key strengths of a map is that it can visualize features and their spatial relationships of a large area. Though, the limited space of mobile devices leads to a visualization of only a discrete view of an area. As consequence, the acquisition of spatial knowledge is impacted with respect to accuracy and response time [Dillemuth, 2009]. Since the space of the display is limited, landmarks are often outside of the displayed area. Accordingly, they have to be mapped on-screen to overcome this limitation. Research has already shown that displaying distant landmarks on-screen holds positive effects on supporting persons acquisition of directional knowledge that benefits spatial orientation [Li et al., 2014]. For the reason that the chosen visualization does not convey information about distance from the user’s position to the distant object a better visualization has to be provided. Research already provides several approaches to display distant objects on small displays (e.g. [Baudisch and Rosenholtz, 2003], [Gustafson et al., 2008], [Bertel et al., 2014]). However, given approaches are mainly focused on guiding a user to a distant location. Therefore, this thesis will aim at adapting common approaches of research to display off-screen landmarks in order to investigate in what extent spatial orientation is supported while navigating through traffic.
+### Project for Master's Thesis - handed in on 12.09.2016
+
+The use of car navigation systems is a convenient way to reach a destination. However, users often become device-focused and develop only a reduced understanding of their environment. Common navigation systems focus on the route and its instructions. Landmarks are seldom used in navigation systems, yet they are important elements to support spatial orientation during wayﬁnding tasks. One way to convey information about landmarks is to display them in a navigation system’s map interface. Due to limited screen sizes and map scales, landmarks are mostly outside the mapped area. This work develops and tests two types of visualizations of oﬀ-screen landmarks to support spatial orientation while navigating. Implemented as Android Application.
 
 ### Status
-Wi-Fi Pointers  
-Tangible Pointers  
-Wedges  
+Implemented two different visualizations of off-screen landmarks
+#### Wi-Fi Pointers:
+<img src="https://raw.githubusercontent.com/Schumi09/WayTo-Navigation/master/preview/wifi_final.png" width="400">
+#### Wedges:
+<img src="https://raw.githubusercontent.com/Schumi09/WayTo-Navigation/master/preview/wedges_final.png" width="400">
 
+##### Further key feature
+Simulating and playing car drives from gpx waypoint files.
+
+### Credits
+* [Mapbox Android SDK](https://www.mapbox.com/android-sdk/)
+* [JTS Topology Suite](http://tsusiatsoftware.net/jts/main.html)
+* [android-maps-utils](https://github.com/googlemaps/android-maps-utils)
+* [gpx-parser](https://github.com/himanshu-soni/gpx-parser)
+* [Flaticon](http://www.flaticon.com/)
+
+### ToDo
+* Update Mapbox Android SDK
+* Provide UI to select route
+* Improve settings menu
+
+### License
+MIT License
+
+Copyright (c) [2016] [Daniel Schumacher]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
